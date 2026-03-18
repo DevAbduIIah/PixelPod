@@ -137,7 +137,3 @@ PixelPod supports both the on-screen click wheel and keyboard input.
 - Volume controls and scrubbing
 - Better error states around playback device availability
 - Deployment-ready production configuration
-
-## License
-
-This project is currently unlicensed. Add a license before publishing if you want others to reuse it under specific terms.

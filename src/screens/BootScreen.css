@@ -1,0 +1,96 @@
+.boot-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  gap: 20px;
+  animation: bootFadeIn 0.5s ease;
+}
+
+@keyframes bootFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pixel-logo {
+  font-size: 4px;
+  line-height: 1;
+  white-space: pre;
+  color: var(--screen-dark);
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  animation: logoAppear 0.8s ease 0.2s forwards;
+}
+
+@keyframes logoAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.boot-text {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--screen-dark);
+  text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  animation: textPulse 1s ease 0.5s forwards;
+}
+
+@keyframes textPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.loading-bar {
+  width: 120px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 2px solid var(--screen-dark);
+  opacity: 0;
+  animation: barAppear 0.3s ease 1s forwards;
+}
+
+@keyframes barAppear {
+  to {
+    opacity: 1;
+  }
+}
+
+.loading-progress {
+  height: 100%;
+  background: var(--accent);
+  animation: progressLoad 1.5s ease forwards;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+@keyframes progressLoad {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}

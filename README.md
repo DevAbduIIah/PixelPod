@@ -75,6 +75,14 @@ REDIRECT_URI=http://127.0.0.1:5174/callback
 PORT=3001
 ```
 
+Optional frontend overrides:
+
+```env
+# Leave empty to use the Vite proxy during local development
+VITE_API_BASE_URL=
+VITE_API_PROXY_TARGET=http://127.0.0.1:3001
+```
+
 4. Start the frontend and backend together:
 
 ```bash
@@ -104,6 +112,8 @@ After creating the app, copy the Client ID and Client Secret into your local `.e
 - `npm run dev:full` runs both frontend and backend together
 - `npm run build` creates a production frontend build
 - `npm run preview` previews the Vite production build
+
+When running only the frontend dev server, `/api/*` requests are proxied to `http://127.0.0.1:3001` by Vite.
 
 ## Controls
 

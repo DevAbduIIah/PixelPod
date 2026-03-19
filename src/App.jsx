@@ -233,12 +233,6 @@ function App() {
   }, [menuHistory, currentScreen, searchMode, selectPlaylist])
 
   const handleNext = useCallback(() => {
-    // Handle now playing screen - skip to next track
-    if (currentScreen === 'nowPlaying' && playbackReady) {
-      next()
-      return
-    }
-
     // Handle search results navigation
     if (currentScreen === 'search' && searchMode === 'results') {
       setSelectedIndex(prev => (prev + 1) % searchResults.length)
@@ -249,15 +243,9 @@ function App() {
     if (items.length > 0) {
       setSelectedIndex(prev => (prev + 1) % items.length)
     }
-  }, [currentScreen, playbackReady, next, searchMode, searchResults.length, getMenuItems])
+  }, [currentScreen, searchMode, searchResults.length, getMenuItems])
 
   const handlePrevious = useCallback(() => {
-    // Handle now playing screen - go to previous track
-    if (currentScreen === 'nowPlaying' && playbackReady) {
-      previous()
-      return
-    }
-
     // Handle search results navigation
     if (currentScreen === 'search' && searchMode === 'results') {
       setSelectedIndex(prev => (prev - 1 + searchResults.length) % searchResults.length)
@@ -268,13 +256,26 @@ function App() {
     if (items.length > 0) {
       setSelectedIndex(prev => (prev - 1 + items.length) % items.length)
     }
-  }, [currentScreen, playbackReady, previous, searchMode, searchResults.length, getMenuItems])
+  }, [currentScreen, searchMode, searchResults.length, getMenuItems])
+
+  const handleSkipForward = useCallback(() => {
+    if (currentTrack && playbackReady) {
+      next()
+    }
+  }, [currentTrack, playbackReady, next])
+
+  const handleSkipBack = useCallback(() => {
+    if (currentTrack && playbackReady) {
+      previous()
+    }
+  }, [currentTrack, playbackReady, previous])
 
   const handlePlayPause = useCallback(() => {
-    if (currentScreen === 'nowPlaying' && currentTrack && playbackReady) {
+    // Play/pause should work whenever there's a track, regardless of screen
+    if (currentTrack && playbackReady) {
       togglePlayPause()
     }
-  }, [currentScreen, currentTrack, playbackReady, togglePlayPause])
+  }, [currentTrack, playbackReady, togglePlayPause])
 
   return (
     <div className="app">
@@ -287,6 +288,8 @@ function App() {
         onNext={handleNext}
         onPrevious={handlePrevious}
         onPlayPause={handlePlayPause}
+        onSkipForward={handleSkipForward}
+        onSkipBack={handleSkipBack}
         currentTrack={currentTrack}
         isPlaying={isPlaying}
         progress={progress}

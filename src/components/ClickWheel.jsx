@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './ClickWheel.css'
 
-function ClickWheel({ onSelect, onBack, onNext, onPrevious, onPlayPause }) {
+function ClickWheel({ onSelect, onBack, onNext, onPrevious, onPlayPause, onSkipForward, onSkipBack }) {
   const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [lastAngle, setLastAngle] = useState(0)
@@ -67,13 +67,13 @@ function ClickWheel({ onSelect, onBack, onNext, onPrevious, onPlayPause }) {
         <button className="wheel-button top" onClick={onBack}>
           MENU
         </button>
-        <button className="wheel-button right" onClick={onNext}>
+        <button className="wheel-button right" onClick={onSkipForward}>
           ⏭
         </button>
         <button className="wheel-button bottom" onClick={onPlayPause}>
           ⏯
         </button>
-        <button className="wheel-button left" onClick={onPrevious}>
+        <button className="wheel-button left" onClick={onSkipBack}>
           ⏮
         </button>
       </div>

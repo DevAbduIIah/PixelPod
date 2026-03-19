@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
     try {
       await initiateLogin()
     } catch (err) {
-      setError('Failed to initiate login')
+      setError(err.message || 'Failed to initiate login')
       setIsLoading(false)
     }
   }, [])

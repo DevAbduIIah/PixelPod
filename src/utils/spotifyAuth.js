@@ -1,6 +1,53 @@
-const API_BASE = 'http://localhost:3001'
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 const TOKEN_KEY = 'pixelpod_tokens'
+
+const buildApiUrl = (path) => `${API_BASE}${path}`
+
+const parseJsonSafely = async (response) => {
+  const contentType = response.headers.get('content-type') || ''
+
+  if (!contentType.includes('application/json')) {
+    return null
+  }
+
+  try {
+    return await response.json()
+  } catch (error) {
+    console.error('Error parsing auth response:', error)
+    return null
+  }
+}
+
+const formatNetworkError = (error) => {
+  if (error instanceof TypeError) {
+    return new Error(
+      'Could not reach the PixelPod auth server. Start it with "npm run server" or "npm run dev:full" and try again.'
+    )
+  }
+
+  return error
+}
+
+const requestAuthJson = async (path, options = {}) => {
+  let response
+
+  try {
+    response = await fetch(buildApiUrl(path), options)
+  } catch (error) {
+    throw formatNetworkError(error)
+  }
+
+  const data = await parseJsonSafely(response)
+
+  if (!response.ok) {
+    const message = data?.error || data?.details?.error_description || data?.details?.error
+
+    throw new Error(message || 'Auth request failed')
+  }
+
+  return data
+}
 
 export const getStoredTokens = () => {
   try {
@@ -37,8 +84,7 @@ export const isTokenExpired = (tokens) => {
 
 export const initiateLogin = async () => {
   try {
-    const response = await fetch(`${API_BASE}/api/auth/login`)
-    const data = await response.json()
+    const data = await requestAuthJson('/api/auth/login')
 
     // Store state for verification
     localStorage.setItem('pixelpod_auth_state', data.state)
@@ -58,7 +104,7 @@ export const exchangeCodeForToken = async (code, state) => {
     throw new Error('State mismatch - possible CSRF attack')
   }
 
-  const response = await fetch(`${API_BASE}/api/auth/token`, {
+  const tokens = await requestAuthJson('/api/auth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -66,29 +112,17 @@ export const exchangeCodeForToken = async (code, state) => {
     body: JSON.stringify({ code, state })
   })
 
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Token exchange failed')
-  }
-
-  const tokens = await response.json()
   return storeTokens(tokens)
 }
 
 export const refreshAccessToken = async (refreshToken) => {
-  const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+  const tokens = await requestAuthJson('/api/auth/refresh', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ refresh_token: refreshToken })
   })
-
-  if (!response.ok) {
-    throw new Error('Token refresh failed')
-  }
-
-  const tokens = await response.json()
 
   // Keep existing refresh token if not returned
   if (!tokens.refresh_token) {

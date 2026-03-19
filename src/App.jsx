@@ -6,13 +6,14 @@ import { usePlayback } from './context/PlaybackContext'
 import './App.css'
 
 function App() {
-  const { isAuthenticated, isLoading: authLoading, login } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, login, logout } = useAuth()
   const {
     playlists,
     currentPlaylistTracks,
     likedSongs,
     searchResults,
     selectedPlaylist,
+    userProfile,
     isLoading: spotifyLoading,
     fetchPlaylists,
     fetchLikedSongs,
@@ -124,6 +125,8 @@ function App() {
   }, [currentScreen, currentPlaylistTracks, likedSongs])
 
   const handleSelect = useCallback(async () => {
+    console.log('handleSelect called - screen:', currentScreen, 'searchMode:', searchMode, 'selectedIndex:', selectedIndex)
+
     // Handle login screen
     if (currentScreen === 'login') {
       login()
@@ -132,6 +135,29 @@ function App() {
 
     // Don't handle select when loading
     if (spotifyLoading) return
+
+    // Handle search screen first (it doesn't use menu items)
+    if (currentScreen === 'search') {
+      console.log('In search screen - searchResults:', searchResults.length, 'searchMode:', searchMode, 'selectedIndex:', selectedIndex)
+      if (searchResults.length > 0 && searchMode === 'results') {
+        const track = searchResults[selectedIndex]
+        console.log('Attempting to select track:', track?.title)
+        if (track) {
+          setCurrentTrack(track)
+          setCurrentTrackList(searchResults)
+          setCurrentTrackIndex(selectedIndex)
+          setMenuHistory([...menuHistory, currentScreen])
+          setCurrentScreen('nowPlaying')
+          setSearchMode('keyboard')
+          if (track.uri) {
+            play(track.uri)
+          }
+        }
+      } else {
+        console.log('Not selecting - searchMode is not "results" or no results')
+      }
+      return
+    }
 
     const items = getMenuItems()
     if (items.length === 0) return
@@ -147,6 +173,10 @@ function App() {
           setMenuHistory([...menuHistory, currentScreen])
           setCurrentScreen('nowPlaying')
         }
+      } else if (selectedIndex === 2) { // Settings
+        setMenuHistory([...menuHistory, currentScreen])
+        setCurrentScreen('settings')
+        setSelectedIndex(0)
       }
     } else if (currentScreen === 'music') {
       if (selectedIndex === 0) { // Playlists
@@ -184,23 +214,6 @@ function App() {
           play(selectedTrack.uri)
         }
       }
-    } else if (currentScreen === 'search') {
-      // Handle search screen - if results exist and we're viewing them, select a track
-      if (searchResults.length > 0 && searchMode === 'results') {
-        const track = searchResults[selectedIndex]
-        if (track) {
-          setCurrentTrack(track)
-          setCurrentTrackList(searchResults) // Save the track list context
-          setCurrentTrackIndex(selectedIndex) // Save the position
-          setMenuHistory([...menuHistory, currentScreen])
-          setCurrentScreen('nowPlaying')
-          setSearchMode('keyboard') // Reset search mode
-          // Play the track using real Spotify playback
-          if (track.uri) {
-            play(track.uri)
-          }
-        }
-      }
     }
   }, [
     currentScreen, selectedIndex, menuHistory, login,
@@ -209,7 +222,9 @@ function App() {
   ])
 
   const handleSearch = useCallback(async (query) => {
+    console.log('Search triggered for:', query)
     const results = await searchTracks(query)
+    console.log('Search results:', results?.length || 0, 'tracks')
     // Use the returned results instead of relying on stale state
     if (results && results.length > 0) {
       setSearchMode('results')
@@ -299,6 +314,16 @@ function App() {
     }
   }, [currentTrack, playbackReady, togglePlayPause])
 
+  const handleLogout = useCallback(() => {
+    logout()
+    setCurrentScreen('boot')
+    setMenuHistory([])
+    setSelectedIndex(0)
+    setCurrentTrack(null)
+    setCurrentTrackList([])
+    setCurrentTrackIndex(0)
+  }, [logout])
+
   return (
     <div className="app">
       <IPod
@@ -319,6 +344,8 @@ function App() {
         searchResults={searchResults}
         onSearch={handleSearch}
         searchMode={searchMode}
+        userProfile={userProfile}
+        onLogout={handleLogout}
       />
     </div>
   )

@@ -20,6 +20,9 @@ async function fetchWithAuth(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
+    console.log('Full Spotify error response:', JSON.stringify(error, null, 2))
+    console.log('Response status:', response.status)
+    console.log('Response URL:', response.url)
     throw new Error(error.error?.message || `API error: ${response.status}`)
   }
 
@@ -47,9 +50,14 @@ export async function getSavedTracks(limit = 50, offset = 0) {
 }
 
 // Search for tracks, artists, albums, playlists
-export async function search(query, types = ['track'], limit = 20) {
+export async function search(query, types = ['track'], limit = 50) {
   const typeString = types.join(',')
-  return fetchWithAuth(`/search?q=${encodeURIComponent(query)}&type=${typeString}&limit=${limit}`)
+  const searchParams = new URLSearchParams({
+    q: query,
+    type: typeString
+  })
+  // Note: limit parameter removed - Spotify search endpoint may not accept it with certain token scopes
+  return fetchWithAuth(`/search?${searchParams.toString()}`)
 }
 
 // Get user's top tracks

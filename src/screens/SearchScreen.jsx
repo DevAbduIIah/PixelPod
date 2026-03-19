@@ -14,6 +14,7 @@ function SearchScreen({
   searchResults,
   selectedIndex,
   onSearch,
+  onSelect,
   isLoading,
   mode = 'keyboard'
 }) {
@@ -22,6 +23,7 @@ function SearchScreen({
   const [keyboardCol, setKeyboardCol] = useState(0)
   const searchTimeoutRef = useRef(null)
   const inputRef = useRef(null)
+  const selectedResultRef = useRef(null)
 
   const currentKey = KEYBOARD_LAYOUT[keyboardRow]?.[keyboardCol] || 'A'
 
@@ -32,6 +34,16 @@ function SearchScreen({
     }
   }, [])
 
+  // Scroll selected result into view
+  useEffect(() => {
+    if (selectedResultRef.current && mode === 'results') {
+      selectedResultRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      })
+    }
+  }, [selectedIndex, mode])
+
   // Handle real keyboard input from user
   const handleInputChange = (e) => {
     const newQuery = e.target.value
@@ -40,10 +52,15 @@ function SearchScreen({
 
   // Handle special keyboard keys
   const handleInputKeyDown = (e) => {
-    // Let onSearch callback handle the search - it's debounced
-    if (e.key === 'Enter' && query.trim()) {
+    // If in results mode, Enter should select the track
+    if (e.key === 'Enter') {
       e.preventDefault()
-      if (onSearch) {
+      console.log('Enter pressed in SearchScreen - mode:', mode, 'hasResults:', searchResults.length > 0)
+      if (mode === 'results' && searchResults.length > 0 && onSelect) {
+        console.log('Calling onSelect from SearchScreen')
+        onSelect()
+      } else if (query.trim() && onSearch) {
+        console.log('Calling onSearch from SearchScreen')
         onSearch(query.trim())
       }
     }
@@ -91,12 +108,13 @@ function SearchScreen({
     return (
       <div className="search-screen">
         <div className="search-header">
-          <span>Results: "{query}"</span>
+          <span>Results ({searchResults.length})</span>
         </div>
         <div className="search-results">
           {searchResults.map((track, index) => (
             <div
               key={track.id}
+              ref={index === selectedIndex ? selectedResultRef : null}
               className={`search-result-item ${index === selectedIndex ? 'selected' : ''}`}
             >
               <div className="result-title">{track.title}</div>
@@ -129,6 +147,10 @@ function SearchScreen({
 
       {isLoading && (
         <div className="search-loading">Searching...</div>
+      )}
+
+      {!isLoading && query.length >= 2 && searchResults.length === 0 && (
+        <div className="search-hint">No tracks found. Try a different search.</div>
       )}
 
       {query.length > 0 && query.length < 2 && (

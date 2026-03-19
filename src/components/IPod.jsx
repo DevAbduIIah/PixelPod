@@ -17,9 +17,12 @@ function IPod({
   currentTrack,
   isPlaying,
   progress,
+  isLoading,
   searchResults,
   onSearch,
-  searchMode
+  searchMode,
+  userProfile,
+  onLogout
 }) {
   // Keyboard controls
   useEffect(() => {
@@ -87,9 +90,13 @@ function IPod({
           currentTrack={currentTrack}
           isPlaying={isPlaying}
           progress={progress}
+          isLoading={isLoading}
           searchResults={searchResults}
           onSearch={onSearch}
+          onSelect={onSelect}
           mode={searchMode}
+          userProfile={userProfile}
+          onLogout={onLogout}
         />
         <ClickWheel
           onSelect={onSelect}

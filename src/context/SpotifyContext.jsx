@@ -26,10 +26,22 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await getUserPlaylists()
-      const formattedPlaylists = data.items.map(formatPlaylist).filter(Boolean)
-      setPlaylists(formattedPlaylists)
-      return formattedPlaylists
+      let allPlaylists = []
+      let offset = 0
+      const limit = 50
+      let hasMore = true
+
+      while (hasMore) {
+        const data = await getUserPlaylists(limit, offset)
+        const formattedPlaylists = data.items.map(formatPlaylist).filter(Boolean)
+        allPlaylists = [...allPlaylists, ...formattedPlaylists]
+
+        offset += limit
+        hasMore = data.items.length === limit && data.next
+      }
+
+      setPlaylists(allPlaylists)
+      return allPlaylists
     } catch (err) {
       console.error('Error fetching playlists:', err)
       setError(err.message)
@@ -44,10 +56,22 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await getPlaylistTracks(playlistId)
-      const formattedTracks = data.items.map(formatTrack).filter(Boolean)
-      setCurrentPlaylistTracks(formattedTracks)
-      return formattedTracks
+      let allTracks = []
+      let offset = 0
+      const limit = 50
+      let hasMore = true
+
+      while (hasMore) {
+        const data = await getPlaylistTracks(playlistId, limit, offset)
+        const formattedTracks = data.items.map(formatTrack).filter(Boolean)
+        allTracks = [...allTracks, ...formattedTracks]
+
+        offset += limit
+        hasMore = data.items.length === limit && data.next
+      }
+
+      setCurrentPlaylistTracks(allTracks)
+      return allTracks
     } catch (err) {
       console.error('Error fetching playlist tracks:', err)
       setError(err.message)
@@ -62,10 +86,22 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await getSavedTracks()
-      const formattedTracks = data.items.map(formatTrack).filter(Boolean)
-      setLikedSongs(formattedTracks)
-      return formattedTracks
+      let allTracks = []
+      let offset = 0
+      const limit = 50
+      let hasMore = true
+
+      while (hasMore) {
+        const data = await getSavedTracks(limit, offset)
+        const formattedTracks = data.items.map(formatTrack).filter(Boolean)
+        allTracks = [...allTracks, ...formattedTracks]
+
+        offset += limit
+        hasMore = data.items.length === limit && data.next
+      }
+
+      setLikedSongs(allTracks)
+      return allTracks
     } catch (err) {
       console.error('Error fetching liked songs:', err)
       setError(err.message)
@@ -77,7 +113,9 @@ export function SpotifyProvider({ children }) {
 
   // Search for tracks
   const searchTracks = useCallback(async (query) => {
+    console.log('searchTracks called with:', query)
     if (!query.trim()) {
+      console.log('Empty query, clearing results')
       setSearchResults([])
       return []
     }
@@ -85,8 +123,12 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
+      console.log('Calling Spotify search API...')
       const data = await search(query, ['track'])
+      console.log('Raw API response:', data)
+      console.log('Tracks items count:', data?.tracks?.items?.length || 0)
       const formattedTracks = data.tracks.items.map(formatTrack).filter(Boolean)
+      console.log('Formatted tracks count:', formattedTracks.length)
       setSearchResults(formattedTracks)
       return formattedTracks
     } catch (err) {

@@ -3,6 +3,7 @@ import MenuScreen from '../screens/MenuScreen'
 import NowPlayingScreen from '../screens/NowPlayingScreen'
 import LoginScreen from '../screens/LoginScreen'
 import SearchScreen from '../screens/SearchScreen'
+import SettingsScreen from '../screens/SettingsScreen'
 import './Screen.css'
 
 function Screen({
@@ -15,8 +16,11 @@ function Screen({
   searchQuery,
   searchResults,
   onSearch,
+  onSelect,
   isLoading,
-  mode
+  mode,
+  userProfile,
+  onLogout
 }) {
   const renderScreen = () => {
     switch (currentScreen) {
@@ -28,6 +32,8 @@ function Screen({
         return <MenuScreen title="Main Menu" items={menuItems} selectedIndex={selectedIndex} />
       case 'music':
         return <MenuScreen title="Music" items={menuItems} selectedIndex={selectedIndex} />
+      case 'settings':
+        return <SettingsScreen userProfile={userProfile} onLogout={onLogout} />
       case 'playlists':
         return <MenuScreen title="Playlists" items={menuItems} selectedIndex={selectedIndex} />
       case 'songs':
@@ -40,6 +46,7 @@ function Screen({
             searchResults={searchResults}
             selectedIndex={selectedIndex}
             onSearch={onSearch}
+            onSelect={onSelect}
             isLoading={isLoading}
             mode={mode || 'keyboard'}
           />

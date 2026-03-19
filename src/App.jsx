@@ -37,6 +37,8 @@ function App() {
   const [menuHistory, setMenuHistory] = useState([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [currentTrack, setCurrentTrack] = useState(null)
+  const [currentTrackList, setCurrentTrackList] = useState([]) // Track list being played from
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0) // Current position in track list
   const [searchMode, setSearchMode] = useState('keyboard') // 'keyboard' or 'results'
 
   // Sync playback state with real playback
@@ -121,7 +123,7 @@ function App() {
     return []
   }, [currentScreen, currentPlaylistTracks, likedSongs])
 
-  const handleSelect = useCallback(() => {
+  const handleSelect = useCallback(async () => {
     // Handle login screen
     if (currentScreen === 'login') {
       login()
@@ -162,7 +164,7 @@ function App() {
       }
     } else if (currentScreen === 'playlists') {
       if (playlists[selectedIndex]) {
-        selectPlaylist(playlists[selectedIndex])
+        await selectPlaylist(playlists[selectedIndex])
         setMenuHistory([...menuHistory, currentScreen])
         setCurrentScreen('playlistTracks')
         setSelectedIndex(0)
@@ -172,6 +174,8 @@ function App() {
       if (tracks[selectedIndex]) {
         const selectedTrack = tracks[selectedIndex]
         setCurrentTrack(selectedTrack)
+        setCurrentTrackList(tracks) // Save the track list context
+        setCurrentTrackIndex(selectedIndex) // Save the position
         setMenuHistory([...menuHistory, currentScreen])
         setCurrentScreen('nowPlaying')
         // Play the track using real Spotify playback
@@ -186,6 +190,8 @@ function App() {
         const track = searchResults[selectedIndex]
         if (track) {
           setCurrentTrack(track)
+          setCurrentTrackList(searchResults) // Save the track list context
+          setCurrentTrackIndex(selectedIndex) // Save the position
           setMenuHistory([...menuHistory, currentScreen])
           setCurrentScreen('nowPlaying')
           setSearchMode('keyboard') // Reset search mode
@@ -259,16 +265,32 @@ function App() {
   }, [currentScreen, searchMode, searchResults.length, getMenuItems])
 
   const handleSkipForward = useCallback(() => {
-    if (currentTrack && playbackReady) {
-      next()
+    if (currentTrack && playbackReady && currentTrackList.length > 0) {
+      // Calculate next track index
+      const nextIndex = (currentTrackIndex + 1) % currentTrackList.length
+      const nextTrack = currentTrackList[nextIndex]
+
+      if (nextTrack && nextTrack.uri) {
+        setCurrentTrack(nextTrack)
+        setCurrentTrackIndex(nextIndex)
+        play(nextTrack.uri)
+      }
     }
-  }, [currentTrack, playbackReady, next])
+  }, [currentTrack, playbackReady, currentTrackList, currentTrackIndex, play])
 
   const handleSkipBack = useCallback(() => {
-    if (currentTrack && playbackReady) {
-      previous()
+    if (currentTrack && playbackReady && currentTrackList.length > 0) {
+      // Calculate previous track index (wrap around to end if at beginning)
+      const prevIndex = (currentTrackIndex - 1 + currentTrackList.length) % currentTrackList.length
+      const prevTrack = currentTrackList[prevIndex]
+
+      if (prevTrack && prevTrack.uri) {
+        setCurrentTrack(prevTrack)
+        setCurrentTrackIndex(prevIndex)
+        play(prevTrack.uri)
+      }
     }
-  }, [currentTrack, playbackReady, previous])
+  }, [currentTrack, playbackReady, currentTrackList, currentTrackIndex, play])
 
   const handlePlayPause = useCallback(() => {
     // Play/pause should work whenever there's a track, regardless of screen

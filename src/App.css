@@ -5,4 +5,79 @@
   width: 100%;
   height: 100%;
   perspective: 1000px;
+  position: relative;
+  isolation: isolate;
+}
+
+.app::before {
+  content: "";
+  position: absolute;
+  inset: 6% 14%;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.14) 0%, transparent 68%);
+  filter: blur(48px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.app.theme-classic {
+  --screen-bg: #b9c7a5;
+  --screen-light: #dbe5cb;
+  --screen-dark: #405137;
+  --accent: #5a7150;
+  --accent-rgb: 90, 113, 80;
+  --text-primary: #24301f;
+  --text-secondary: #5b6b57;
+  --screen-rule: rgba(64, 81, 55, 0.18);
+  --screen-panel-bg: linear-gradient(180deg, rgba(242, 246, 231, 0.86), rgba(213, 223, 197, 0.78));
+  --screen-panel-border: rgba(73, 91, 61, 0.18);
+  --screen-selected-bg: linear-gradient(180deg, rgba(90, 113, 80, 0.22), rgba(90, 113, 80, 0.14));
+  --screen-selected-border: rgba(73, 91, 61, 0.32);
+}
+
+.app.theme-modern {
+  --screen-bg: #d5dfd7;
+  --screen-light: #f1f5f0;
+  --screen-dark: #19352a;
+  --accent: #1db954;
+  --accent-rgb: 29, 185, 84;
+  --text-primary: #19352a;
+  --text-secondary: #537064;
+  --screen-rule: rgba(25, 53, 42, 0.16);
+  --screen-panel-bg: linear-gradient(180deg, rgba(247, 250, 248, 0.92), rgba(219, 233, 224, 0.76));
+  --screen-panel-border: rgba(40, 82, 60, 0.14);
+  --screen-selected-bg: linear-gradient(180deg, rgba(29, 185, 84, 0.18), rgba(29, 185, 84, 0.1));
+  --screen-selected-border: rgba(29, 120, 66, 0.3);
+}
+
+.app.skin-silver {
+  --shell-bg: linear-gradient(180deg, #fbfbfc 0%, #eceef1 38%, #d9dde1 100%);
+  --shell-border: rgba(168, 176, 186, 0.9);
+  --shell-shadow-strong: rgba(39, 47, 56, 0.28);
+  --shell-shadow-soft: rgba(19, 28, 36, 0.18);
+  --wheel-bg: linear-gradient(145deg, #f0f0f0, #c8c8c8);
+  --wheel-border: rgba(255, 255, 255, 0.5);
+  --wheel-inner-bg: linear-gradient(145deg, #ffffff, #d8d8d8);
+  --wheel-text: var(--text-secondary);
+}
+
+.app.skin-graphite {
+  --shell-bg: linear-gradient(180deg, #565d68 0%, #3f454e 38%, #2d333b 100%);
+  --shell-border: rgba(79, 89, 101, 0.95);
+  --shell-shadow-strong: rgba(13, 17, 21, 0.4);
+  --shell-shadow-soft: rgba(17, 20, 24, 0.24);
+  --wheel-bg: linear-gradient(145deg, #676f7b, #30353c);
+  --wheel-border: rgba(255, 255, 255, 0.18);
+  --wheel-inner-bg: linear-gradient(145deg, #767f8b, #474e57);
+  --wheel-text: #eef3f6;
+}
+
+.app.skin-blue {
+  --shell-bg: linear-gradient(180deg, #c9d8e8 0%, #a6bdd2 38%, #7f9bb4 100%);
+  --shell-border: rgba(97, 125, 152, 0.9);
+  --shell-shadow-strong: rgba(31, 49, 73, 0.3);
+  --shell-shadow-soft: rgba(27, 38, 56, 0.18);
+  --wheel-bg: linear-gradient(145deg, #d9e5f2, #99afc6);
+  --wheel-border: rgba(255, 255, 255, 0.46);
+  --wheel-inner-bg: linear-gradient(145deg, #f7fbff, #c7d8e8);
+  --wheel-text: #36536e;
 }

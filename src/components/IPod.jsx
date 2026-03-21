@@ -35,7 +35,11 @@ function IPod({
   searchMode,
   userProfile,
   onLogout,
-  transitionDirection
+  transitionDirection,
+  theme,
+  skin,
+  onThemeChange,
+  onSkinChange
 }) {
   // Initialize audio on first user interaction
   useEffect(() => {
@@ -168,7 +172,7 @@ function IPod({
   }, [onPrevious, onNext, onSelect, onBack, onPlayPause, onSkipForward, onSkipBack, onToggleShuffle, onCycleRepeatMode, onVolumeChange, volume])
 
   return (
-    <div className="ipod">
+    <div className={`ipod theme-${theme} skin-${skin}`}>
       <div className="ipod-shell">
         <Screen
           currentScreen={currentScreen}
@@ -197,6 +201,10 @@ function IPod({
           userProfile={userProfile}
           onLogout={onLogout}
           transitionDirection={transitionDirection}
+          theme={theme}
+          skin={skin}
+          onThemeChange={onThemeChange}
+          onSkinChange={onSkinChange}
         />
         <ClickWheel
           onSelect={handleSelectWithSound}

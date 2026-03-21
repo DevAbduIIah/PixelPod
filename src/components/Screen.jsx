@@ -27,32 +27,43 @@ function Screen({
   onPlayPause,
   playbackError,
   playbackReady,
-  searchQuery,
   searchResults,
   onSearch,
   onSelect,
   mode,
   userProfile,
   onLogout,
-  transitionDirection
+  transitionDirection,
+  theme,
+  skin,
+  onThemeChange,
+  onSkinChange
 }) {
   const [displayScreen, setDisplayScreen] = useState(currentScreen)
-  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [transitionPhase, setTransitionPhase] = useState('idle')
 
-  // Handle screen transitions
   useEffect(() => {
     if (currentScreen !== displayScreen) {
-      setIsTransitioning(true)
-      const timer = setTimeout(() => {
+      setTransitionPhase('exiting')
+
+      const swapTimer = setTimeout(() => {
         setDisplayScreen(currentScreen)
-        setIsTransitioning(false)
-      }, 300) // Match CSS transition duration
-      return () => clearTimeout(timer)
+        setTransitionPhase('entering')
+      }, 160)
+
+      const settleTimer = setTimeout(() => {
+        setTransitionPhase('idle')
+      }, 320)
+
+      return () => {
+        clearTimeout(swapTimer)
+        clearTimeout(settleTimer)
+      }
     }
   }, [currentScreen, displayScreen])
 
-  const renderScreen = () => {
-    switch (currentScreen) {
+  const renderScreen = (screenName) => {
+    switch (screenName) {
       case 'boot':
         return <BootScreen />
       case 'login':
@@ -62,7 +73,16 @@ function Screen({
       case 'music':
         return <MenuScreen title="Music" items={menuItems} selectedIndex={selectedIndex} />
       case 'settings':
-        return <SettingsScreen userProfile={userProfile} onLogout={onLogout} />
+        return (
+          <SettingsScreen
+            userProfile={userProfile}
+            onLogout={onLogout}
+            theme={theme}
+            skin={skin}
+            onThemeChange={onThemeChange}
+            onSkinChange={onSkinChange}
+          />
+        )
       case 'playlists':
         return <MenuScreen title="Playlists" items={menuItems} selectedIndex={selectedIndex} />
       case 'songs':
@@ -101,6 +121,7 @@ function Screen({
             onPlayPause={onPlayPause}
             playbackError={playbackError}
             playbackReady={playbackReady}
+            theme={theme}
           />
         )
       default:
@@ -111,11 +132,11 @@ function Screen({
   return (
     <div className="screen">
       <div
-        className={`screen-content ${isTransitioning ? 'transitioning' : ''} ${
+        className={`screen-content ${transitionPhase} ${
           transitionDirection === 'forward' ? 'slide-left' : 'slide-right'
         }`}
       >
-        {renderScreen()}
+        {renderScreen(displayScreen)}
       </div>
     </div>
   )

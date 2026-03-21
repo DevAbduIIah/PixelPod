@@ -31,6 +31,7 @@ function IPod({
   playbackError,
   playbackReady,
   searchResults,
+  spotifyError,
   onSearch,
   searchMode,
   userProfile,
@@ -195,6 +196,7 @@ function IPod({
           playbackError={playbackError}
           playbackReady={playbackReady}
           searchResults={searchResults}
+          spotifyError={spotifyError}
           onSearch={onSearch}
           onSelect={onSelect}
           mode={searchMode}

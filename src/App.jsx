@@ -8,7 +8,7 @@ import './App.css'
 const APPEARANCE_STORAGE_KEY = 'pixelpod_appearance'
 
 function App() {
-  const { isAuthenticated, isLoading: authLoading, login, logout } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, login, logout, error: authError } = useAuth()
   const {
     playlists,
     currentPlaylistTracks,
@@ -17,6 +17,7 @@ function App() {
     selectedPlaylist,
     userProfile,
     isLoading: spotifyLoading,
+    error: spotifyError,
     fetchPlaylists,
     fetchLikedSongs,
     selectPlaylist,
@@ -90,6 +91,42 @@ function App() {
     return searchResults?.tracks || []
   }, [searchResults])
 
+  const createStatusItem = useCallback((tone, title, detail, code = null) => ({
+    type: 'status',
+    tone,
+    title,
+    detail,
+    code
+  }), [])
+
+  const getLibraryStatusItem = useCallback((screenName) => {
+    const activeError = spotifyError || authError
+
+    if (activeError) {
+      const normalizedError = activeError.toLowerCase()
+
+      if (normalizedError.includes('expired') || normalizedError.includes('not authenticated') || normalizedError.includes('token')) {
+        return createStatusItem('error', 'Login Expired', 'Connect Spotify again to refresh your library.', 'AUTH')
+      }
+
+      if (screenName === 'playlistTracks' && normalizedError.includes('access')) {
+        return createStatusItem('error', 'Playlist Unavailable', 'This playlist could not be opened right now.', 'LOCK')
+      }
+
+      return createStatusItem('error', 'Library Unavailable', 'PixelPod could not load Spotify data right now.', 'SYNC')
+    }
+
+    if (screenName === 'playlists') {
+      return createStatusItem('empty', 'No Playlists Found', 'Save or create a playlist in Spotify to see it here.', 'LIST')
+    }
+
+    if (screenName === 'songs') {
+      return createStatusItem('empty', 'No Liked Songs', 'Add tracks to Your Library and they will appear here.', 'LIKE')
+    }
+
+    return createStatusItem('empty', 'No Tracks Found', 'There are no playable tracks in this view yet.', 'NOTE')
+  }, [spotifyError, authError, createStatusItem])
+
   useEffect(() => {
     if (currentScreen === 'boot') {
       const timer = setTimeout(() => {
@@ -134,28 +171,28 @@ function App() {
       case 'music':
         return ['Playlists', 'Liked Songs', 'Search']
       case 'playlists':
-        if (spotifyLoading) return ['Loading...']
-        return playlists.length > 0 ? playlists : ['No playlists found']
+        if (spotifyLoading) return [createStatusItem('loading', 'Loading Playlists', 'Syncing your Spotify library.', 'LOAD')]
+        return playlists.length > 0 ? playlists : [getLibraryStatusItem('playlists')]
       case 'playlistTracks':
-        if (spotifyLoading) return ['Loading...']
+        if (spotifyLoading) return [createStatusItem('loading', 'Loading Tracks', 'Reading this playlist from Spotify.', 'LOAD')]
         return currentPlaylistTracks.length > 0
           ? currentPlaylistTracks.map((track) => ({
               ...track,
               image: track.albumArtSmall || track.albumArt
             }))
-          : ['No tracks found']
+          : [getLibraryStatusItem('playlistTracks')]
       case 'songs':
-        if (spotifyLoading) return ['Loading...']
+        if (spotifyLoading) return [createStatusItem('loading', 'Loading Library', 'Checking your liked songs.', 'LOAD')]
         return likedSongs.length > 0
           ? likedSongs.map((track) => ({
               ...track,
               image: track.albumArtSmall || track.albumArt
             }))
-          : ['No liked songs']
+          : [getLibraryStatusItem('songs')]
       default:
         return []
     }
-  }, [currentScreen, playlists, currentPlaylistTracks, likedSongs, spotifyLoading])
+  }, [currentScreen, playlists, currentPlaylistTracks, likedSongs, spotifyLoading, createStatusItem, getLibraryStatusItem])
 
   const getCurrentTracks = useCallback(() => {
     if (currentScreen === 'playlistTracks') return currentPlaylistTracks
@@ -400,6 +437,7 @@ function App() {
         playbackError={playbackError}
         playbackReady={playbackReady}
         searchResults={searchResults}
+        spotifyError={spotifyError}
         onSearch={handleSearch}
         searchMode={searchMode}
         userProfile={userProfile}

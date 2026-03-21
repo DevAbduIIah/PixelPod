@@ -28,6 +28,7 @@ function Screen({
   playbackError,
   playbackReady,
   searchResults,
+  spotifyError,
   onSearch,
   onSelect,
   mode,
@@ -93,6 +94,7 @@ function Screen({
         return (
           <SearchScreen
             searchResults={searchResults}
+            error={spotifyError}
             selectedIndex={selectedIndex}
             onSearch={onSearch}
             onSelect={onSelect}

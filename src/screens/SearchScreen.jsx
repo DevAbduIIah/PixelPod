@@ -12,6 +12,7 @@ function SearchScreen({
   onSearch,
   onSelect,
   isLoading,
+  error,
   mode = 'keyboard'
 }) {
   const [query, setQuery] = useState('')
@@ -133,6 +134,25 @@ function SearchScreen({
   const hasResults = currentResults.length > 0
   const totalCount = getTotalCount()
   const hasAnyResults = totalCount > 0
+  const searchError = (() => {
+    if (!error) return null
+
+    const normalizedError = error.toLowerCase()
+
+    if (normalizedError.includes('expired') || normalizedError.includes('token') || normalizedError.includes('not authenticated')) {
+      return {
+        title: 'Login Expired',
+        detail: 'Connect Spotify again to continue searching.',
+        code: 'AUTH'
+      }
+    }
+
+    return {
+      title: 'Search Unavailable',
+      detail: 'PixelPod could not reach Spotify search right now.',
+      code: 'SYNC'
+    }
+  })()
 
   if (mode === 'results' && hasResults) {
     return (
@@ -256,7 +276,15 @@ function SearchScreen({
         </div>
       )}
 
-      {!isLoading && query.length >= 2 && !hasAnyResults && (
+      {!isLoading && query.length >= 2 && searchError && (
+        <div className="empty-state error-state">
+          <div className="empty-icon error-icon">{searchError.code}</div>
+          <div className="empty-title">{searchError.title}</div>
+          <div className="empty-subtitle">{searchError.detail}</div>
+        </div>
+      )}
+
+      {!isLoading && query.length >= 2 && !searchError && !hasAnyResults && (
         <div className="empty-state">
           <div className="empty-icon">SCAN</div>
           <div className="empty-title">No Results Found</div>

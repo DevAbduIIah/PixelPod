@@ -15,8 +15,10 @@ function MenuScreen({ title, items, selectedIndex, isLoading }) {
 
   const isObjectItem = (item) => typeof item === 'object' && item !== null
 
+  const isStatusItem = (item) => isObjectItem(item) && item.type === 'status'
+
   const shouldRenderArtwork = (item) => {
-    if (!isObjectItem(item)) {
+    if (!isObjectItem(item) || isStatusItem(item)) {
       return false
     }
 
@@ -31,6 +33,7 @@ function MenuScreen({ title, items, selectedIndex, isLoading }) {
 
   const getItemText = (item) => {
     if (typeof item === 'string') return item
+    if (isStatusItem(item)) return item.title
     if (item?.name) return item.name
     if (item?.title) return item.title
     return 'Unknown'
@@ -39,6 +42,10 @@ function MenuScreen({ title, items, selectedIndex, isLoading }) {
   const getItemSubtitle = (item) => {
     if (!isObjectItem(item)) {
       return null
+    }
+
+    if (isStatusItem(item)) {
+      return item.detail || null
     }
 
     if (item.artist) return item.artist
@@ -79,14 +86,15 @@ function MenuScreen({ title, items, selectedIndex, isLoading }) {
           const subtitle = getItemSubtitle(item)
           const itemImage = getItemImage(item)
           const showArtwork = shouldRenderArtwork(item)
+          const statusItem = isStatusItem(item)
 
           return (
             <div
               key={isObjectItem(item) && item.id ? item.id : index}
               ref={index === selectedIndex ? selectedRef : null}
-              className={`menu-item ${index === selectedIndex ? 'selected' : ''} ${showArtwork ? 'has-artwork' : 'no-artwork'}`}
+              className={`menu-item ${index === selectedIndex && !statusItem ? 'selected' : ''} ${showArtwork ? 'has-artwork' : 'no-artwork'} ${statusItem ? `status-item ${item.tone || 'info'}` : ''}`}
             >
-              <span className="item-marker" aria-hidden="true" />
+              <span className="item-marker" aria-hidden="true">{statusItem ? item.code || '...' : ''}</span>
 
               {showArtwork && (
                 <div className={`item-thumbnail ${itemImage ? '' : 'fallback'}`}>

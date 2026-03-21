@@ -1,15 +1,11 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import {
-  getUserPlaylists,
-  getPlaylistTracks,
-  getSavedTracks,
-  search,
-  getUserProfile,
-  formatTrack,
-  formatPlaylist,
-  formatAlbum,
-  formatArtist
-} from '../utils/spotifyApi'
+  fetchAllPlaylists,
+  fetchAllPlaylistTracks,
+  fetchAllLikedSongs,
+  searchSpotifyCatalog,
+  fetchSpotifyUserProfile
+} from '../services/spotifyService'
 
 const SpotifyContext = createContext(null)
 
@@ -32,20 +28,7 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
-      let allPlaylists = []
-      let offset = 0
-      const limit = 50
-      let hasMore = true
-
-      while (hasMore) {
-        const data = await getUserPlaylists(limit, offset)
-        const formattedPlaylists = data.items.map(formatPlaylist).filter(Boolean)
-        allPlaylists = [...allPlaylists, ...formattedPlaylists]
-
-        offset += limit
-        hasMore = data.items.length === limit && data.next
-      }
-
+      const allPlaylists = await fetchAllPlaylists()
       setPlaylists(allPlaylists)
       return allPlaylists
     } catch (err) {
@@ -63,20 +46,7 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
-      let allTracks = []
-      let offset = 0
-      const limit = 50
-      let hasMore = true
-
-      while (hasMore) {
-        const data = await getPlaylistTracks(playlistId, limit, offset)
-        const formattedTracks = data.items.map(formatTrack).filter(Boolean)
-        allTracks = [...allTracks, ...formattedTracks]
-
-        offset += limit
-        hasMore = data.items.length === limit && data.next
-      }
-
+      const allTracks = await fetchAllPlaylistTracks(playlistId)
       setCurrentPlaylistTracks(allTracks)
       return allTracks
     } catch (err) {
@@ -102,20 +72,7 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
-      let allTracks = []
-      let offset = 0
-      const limit = 50
-      let hasMore = true
-
-      while (hasMore) {
-        const data = await getSavedTracks(limit, offset)
-        const formattedTracks = data.items.map(formatTrack).filter(Boolean)
-        allTracks = [...allTracks, ...formattedTracks]
-
-        offset += limit
-        hasMore = data.items.length === limit && data.next
-      }
-
+      const allTracks = await fetchAllLikedSongs()
       setLikedSongs(allTracks)
       return allTracks
     } catch (err) {
@@ -138,13 +95,7 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await search(query, ['track', 'album', 'artist'])
-
-      const tracks = (data.tracks?.items || []).map(formatTrack).filter(Boolean)
-      const albums = (data.albums?.items || []).map(formatAlbum).filter(Boolean)
-      const artists = (data.artists?.items || []).map(formatArtist).filter(Boolean)
-
-      const results = { tracks, albums, artists }
+      const results = await searchSpotifyCatalog(query)
       setSearchResults(results)
       return results
     } catch (err) {
@@ -167,13 +118,9 @@ export function SpotifyProvider({ children }) {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await search(query, ['track', 'album', 'artist'])
-      const tracks = (data.tracks?.items || []).map(formatTrack).filter(Boolean)
-      const albums = (data.albums?.items || []).map(formatAlbum).filter(Boolean)
-      const artists = (data.artists?.items || []).map(formatArtist).filter(Boolean)
-
+      const { tracks, albums, artists } = await searchSpotifyCatalog(query)
       setSearchResults({ tracks, albums, artists })
-      return tracks // Return tracks for backward compatibility
+      return tracks
     } catch (err) {
       console.error('Error searching:', err)
       setSearchResults({ tracks: [], albums: [], artists: [] })
@@ -187,14 +134,9 @@ export function SpotifyProvider({ children }) {
   // Fetch user profile
   const fetchUserProfile = useCallback(async () => {
     try {
-      const data = await getUserProfile()
-      setUserProfile({
-        name: data.display_name,
-        email: data.email,
-        image: data.images?.[0]?.url || null,
-        uri: data.uri
-      })
-      return data
+      const profile = await fetchSpotifyUserProfile()
+      setUserProfile(profile)
+      return profile
     } catch (err) {
       console.error('Error fetching user profile:', err)
       setError(err.message)

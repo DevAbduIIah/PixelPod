@@ -4,33 +4,46 @@
   justify-content: center;
   align-items: center;
   height: 100%;
-  gap: 20px;
-  animation: bootFadeIn 0.5s ease;
+  gap: 14px;
+  animation: bootFadeIn 320ms ease;
 }
 
 @keyframes bootFadeIn {
   from {
     opacity: 0;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
+.boot-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .pixel-logo {
-  font-size: 4px;
-  line-height: 1;
-  white-space: pre;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  background: rgba(var(--accent-rgb), 0.08);
   color: var(--screen-dark);
-  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   opacity: 0;
-  animation: logoAppear 0.8s ease 0.2s forwards;
+  animation: logoAppear 560ms ease 120ms forwards;
 }
 
 @keyframes logoAppear {
   from {
     opacity: 0;
-    transform: scale(0.8);
+    transform: scale(0.94);
   }
   to {
     opacity: 1;
@@ -39,22 +52,23 @@
 }
 
 .boot-text {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   color: var(--screen-dark);
-  text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.5);
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.45);
   opacity: 0;
-  animation: textPulse 1s ease 0.5s forwards;
+  animation: textPulse 720ms ease 220ms forwards;
 }
 
 @keyframes textPulse {
   0% {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.96);
   }
-  50% {
+  55% {
     opacity: 1;
-    transform: scale(1.1);
+    transform: scale(1.04);
   }
   100% {
     opacity: 1;
@@ -62,15 +76,33 @@
   }
 }
 
-.loading-bar {
-  width: 120px;
-  height: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  overflow: hidden;
-  border: 2px solid var(--screen-dark);
+.boot-caption {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
   opacity: 0;
-  animation: barAppear 0.3s ease 1s forwards;
+  animation: captionAppear 260ms ease 480ms forwards;
+}
+
+@keyframes captionAppear {
+  to {
+    opacity: 1;
+  }
+}
+
+.loading-bar {
+  width: 124px;
+  height: 8px;
+  background: rgba(28, 58, 82, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(28, 58, 82, 0.18);
+  box-shadow:
+    inset 0 1px 2px rgba(24, 50, 70, 0.08),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.35);
+  opacity: 0;
+  animation: barAppear 220ms ease 620ms forwards;
 }
 
 @keyframes barAppear {
@@ -81,9 +113,9 @@
 
 .loading-progress {
   height: 100%;
-  background: var(--accent);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.55), rgba(var(--accent-rgb), 0.88));
   animation: progressLoad 1.5s ease forwards;
-  box-shadow: 0 0 8px var(--accent);
 }
 
 @keyframes progressLoad {

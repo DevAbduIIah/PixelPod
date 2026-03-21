@@ -3,6 +3,7 @@ import IPod from './components/IPod'
 import { useSpotifyAuth } from './hooks/useSpotifyAuth'
 import { useSpotify } from './context/SpotifyContext'
 import { usePlayback } from './hooks/usePlayback'
+import { logger } from './utils/logger'
 import './App.css'
 
 const APPEARANCE_STORAGE_KEY = 'pixelpod_appearance'
@@ -71,7 +72,7 @@ function App() {
         setSkin(parsedAppearance.skin)
       }
     } catch (error) {
-      console.error('Error restoring appearance settings:', error)
+      logger.error('Error restoring appearance settings:', error)
     }
   }, [])
 
@@ -79,7 +80,7 @@ function App() {
     try {
       localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({ theme, skin }))
     } catch (error) {
-      console.error('Error saving appearance settings:', error)
+      logger.error('Error saving appearance settings:', error)
     }
   }, [theme, skin])
 

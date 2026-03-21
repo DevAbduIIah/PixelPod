@@ -3,23 +3,62 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import axios from 'axios'
 import crypto from 'crypto'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 dotenv.config()
 
-const app = express()
-const PORT = process.env.PORT || 3001
-
-app.use(cors())
-app.use(express.json())
-
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const DIST_DIR = path.resolve(__dirname, '../dist')
+const PORT = Number(process.env.PORT || 3001)
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
-const REDIRECT_URI = process.env.REDIRECT_URI || 'http://127.0.0.1:5174'
+const REDIRECT_URI = process.env.REDIRECT_URI || 'http://127.0.0.1:5174/callback'
+const HAS_STATIC_BUILD = fs.existsSync(DIST_DIR)
+const PKCE_TTL_MS = 10 * 60 * 1000
 
-// Store for code verifiers (in production, use Redis or database)
+const app = express()
+app.disable('x-powered-by')
+
+const buildAllowedOrigins = () => {
+  const configuredOrigins = [
+    process.env.FRONTEND_ORIGIN,
+    process.env.CORS_ORIGIN
+  ]
+    .filter(Boolean)
+    .flatMap((value) => value.split(','))
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
+  if (configuredOrigins.length > 0) {
+    return new Set(configuredOrigins)
+  }
+
+  return new Set([
+    'http://127.0.0.1:5174',
+    'http://localhost:5174'
+  ])
+}
+
+const allowedOrigins = buildAllowedOrigins()
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) {
+      callback(null, true)
+      return
+    }
+
+    callback(new Error('Origin not allowed by PixelPod auth server'))
+  }
+}))
+
+app.use(express.json({ limit: '16kb' }))
+
 const verifierStore = new Map()
 
-// Generate code verifier and challenge for PKCE
 function generateCodeVerifier() {
   return crypto.randomBytes(32).toString('base64url')
 }
@@ -31,14 +70,93 @@ function generateCodeChallenge(verifier) {
     .digest('base64url')
 }
 
-// Get Spotify authorization URL
-app.get('/api/auth/login', (req, res) => {
+function requireSpotifyConfig(res) {
+  if (!CLIENT_ID || !CLIENT_SECRET) {
+    res.status(500).json({
+      error: 'Spotify server configuration is incomplete. Add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET.'
+    })
+    return false
+  }
+
+  return true
+}
+
+function setVerifier(state, verifier) {
+  verifierStore.set(state, {
+    verifier,
+    expiresAt: Date.now() + PKCE_TTL_MS
+  })
+}
+
+function getVerifier(state) {
+  const entry = verifierStore.get(state)
+
+  if (!entry) {
+    return null
+  }
+
+  if (Date.now() > entry.expiresAt) {
+    verifierStore.delete(state)
+    return null
+  }
+
+  return entry.verifier
+}
+
+function deleteVerifier(state) {
+  verifierStore.delete(state)
+}
+
+function cleanupExpiredVerifiers() {
+  const now = Date.now()
+
+  for (const [state, entry] of verifierStore.entries()) {
+    if (now > entry.expiresAt) {
+      verifierStore.delete(state)
+    }
+  }
+}
+
+function buildSpotifyTokenHeaders() {
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded'
+  }
+
+  if (CLIENT_ID && CLIENT_SECRET) {
+    const basicAuth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
+    headers.Authorization = `Basic ${basicAuth}`
+  }
+
+  return headers
+}
+
+function getSpotifyErrorMessage(error, fallbackMessage) {
+  return error.response?.data?.error_description ||
+    error.response?.data?.error ||
+    error.message ||
+    fallbackMessage
+}
+
+app.get('/api/health', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'pixelpod-auth',
+    environment: process.env.NODE_ENV || 'development'
+  })
+})
+
+app.get('/api/auth/login', (_req, res) => {
+  if (!requireSpotifyConfig(res)) {
+    return
+  }
+
+  cleanupExpiredVerifiers()
+
   const codeVerifier = generateCodeVerifier()
   const codeChallenge = generateCodeChallenge(codeVerifier)
   const state = crypto.randomBytes(16).toString('hex')
 
-  // Store verifier with state
-  verifierStore.set(state, codeVerifier)
+  setVerifier(state, codeVerifier)
 
   const scope = [
     'user-read-private',
@@ -57,29 +175,32 @@ app.get('/api/auth/login', (req, res) => {
     client_id: CLIENT_ID,
     response_type: 'code',
     redirect_uri: REDIRECT_URI,
-    state: state,
-    scope: scope,
+    state,
+    scope,
     code_challenge_method: 'S256',
     code_challenge: codeChallenge
   })
 
   res.json({
     url: `https://accounts.spotify.com/authorize?${params.toString()}`,
-    state: state
+    state
   })
 })
 
-// Exchange authorization code for access token
 app.post('/api/auth/token', async (req, res) => {
-  const { code, state } = req.body
-
-  if (!code) {
-    return res.status(400).json({ error: 'Authorization code is required' })
+  if (!requireSpotifyConfig(res)) {
+    return
   }
 
-  const codeVerifier = verifierStore.get(state)
+  const { code, state } = req.body
+
+  if (!code || !state) {
+    return res.status(400).json({ error: 'Authorization code and state are required' })
+  }
+
+  const codeVerifier = getVerifier(state)
   if (!codeVerifier) {
-    return res.status(400).json({ error: 'Invalid state parameter' })
+    return res.status(400).json({ error: 'Invalid or expired state parameter' })
   }
 
   try {
@@ -87,47 +208,44 @@ app.post('/api/auth/token', async (req, res) => {
       'https://accounts.spotify.com/api/token',
       new URLSearchParams({
         grant_type: 'authorization_code',
-        code: code,
+        code,
         redirect_uri: REDIRECT_URI,
-        client_id: CLIENT_ID,
         code_verifier: codeVerifier
       }),
       {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        headers: buildSpotifyTokenHeaders()
       }
     )
 
-    // Clean up verifier
-    verifierStore.delete(state)
-
+    deleteVerifier(state)
     res.json(response.data)
   } catch (error) {
-    console.error('Error exchanging code for token:', error.response?.data || error.message)
+    deleteVerifier(state)
 
-    // Provide more specific error messages
     const spotifyError = error.response?.data?.error
     let userMessage = 'Failed to exchange authorization code'
 
     if (spotifyError === 'invalid_grant') {
       userMessage = 'Authorization code expired or already used. Please log in again.'
     } else if (spotifyError === 'invalid_client') {
-      userMessage = 'Invalid Spotify app credentials. Check your .env file.'
+      userMessage = 'Invalid Spotify app credentials. Check your server environment variables.'
     }
 
     res.status(500).json({
       error: userMessage,
-      details: error.response?.data || error.message
+      details: getSpotifyErrorMessage(error, userMessage)
     })
   }
 })
 
-// Refresh access token
 app.post('/api/auth/refresh', async (req, res) => {
-  const { refresh_token } = req.body
+  if (!requireSpotifyConfig(res)) {
+    return
+  }
 
-  if (!refresh_token) {
+  const { refresh_token: refreshToken } = req.body
+
+  if (!refreshToken) {
     return res.status(400).json({ error: 'Refresh token is required' })
   }
 
@@ -136,27 +254,42 @@ app.post('/api/auth/refresh', async (req, res) => {
       'https://accounts.spotify.com/api/token',
       new URLSearchParams({
         grant_type: 'refresh_token',
-        refresh_token: refresh_token,
-        client_id: CLIENT_ID
+        refresh_token: refreshToken
       }),
       {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        headers: buildSpotifyTokenHeaders()
       }
     )
 
     res.json(response.data)
   } catch (error) {
-    console.error('Error refreshing token:', error.response?.data || error.message)
+    const userMessage = 'Failed to refresh token'
+
     res.status(500).json({
-      error: 'Failed to refresh token',
-      details: error.response?.data || error.message
+      error: userMessage,
+      details: getSpotifyErrorMessage(error, userMessage)
     })
   }
 })
 
+if (HAS_STATIC_BUILD) {
+  app.use(express.static(DIST_DIR))
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      next()
+      return
+    }
+
+    res.sendFile(path.join(DIST_DIR, 'index.html'))
+  })
+}
+
 app.listen(PORT, () => {
-  console.log(`🎵 PixelPod auth server running on http://localhost:${PORT}`)
-  console.log(`📱 Make sure your Spotify app redirect URI is set to: ${REDIRECT_URI}`)
+  const runtimeMode = process.env.NODE_ENV || 'development'
+  console.log(`[PixelPod] auth server running on port ${PORT} (${runtimeMode})`)
+  console.log(`[PixelPod] redirect URI: ${REDIRECT_URI}`)
+  if (HAS_STATIC_BUILD) {
+    console.log('[PixelPod] static frontend detected in dist/ and will be served by the auth server')
+  }
 })

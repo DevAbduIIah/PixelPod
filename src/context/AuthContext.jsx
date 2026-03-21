@@ -5,6 +5,7 @@ import {
   beginSpotifyLogin,
   clearAuthSession
 } from '../services/authService'
+import { logger } from '../utils/logger'
 
 const AuthContext = createContext(null)
 
@@ -23,7 +24,7 @@ export function AuthProvider({ children }) {
         setUser(session.user)
         setError(session.error)
       } catch (err) {
-        console.error('Auth check failed:', err)
+        logger.error('Auth check failed:', err)
         setError(err.message || 'Unable to verify Spotify login')
       } finally {
         setIsLoading(false)
@@ -66,7 +67,7 @@ export function AuthProvider({ children }) {
           setUser(session.user)
           setError(session.error)
         } catch (err) {
-          console.error('Token exchange failed:', err)
+          logger.error('Token exchange failed:', err)
           setError(err.message)
         } finally {
           setIsLoading(false)

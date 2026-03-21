@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useDebounce } from '../hooks/useDebounce'
+import { logger } from '../utils/logger'
 import './SearchScreen.css'
 
 const CATEGORIES = ['Tracks', 'Albums', 'Artists']
@@ -30,7 +31,7 @@ function SearchScreen({
         setRecentSearches(JSON.parse(stored))
       }
     } catch (error) {
-      console.error('Error loading recent searches:', error)
+      logger.error('Error loading recent searches:', error)
     }
   }, [])
 

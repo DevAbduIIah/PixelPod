@@ -6,6 +6,7 @@ import {
   searchSpotifyCatalog,
   fetchSpotifyUserProfile
 } from '../services/spotifyService'
+import { logger } from '../utils/logger'
 
 const SpotifyContext = createContext(null)
 
@@ -32,7 +33,7 @@ export function SpotifyProvider({ children }) {
       setPlaylists(allPlaylists)
       return allPlaylists
     } catch (err) {
-      console.error('Error fetching playlists:', err)
+      logger.error('Error fetching playlists:', err)
       setPlaylists([])
       setError(err.message)
       return []
@@ -50,7 +51,7 @@ export function SpotifyProvider({ children }) {
       setCurrentPlaylistTracks(allTracks)
       return allTracks
     } catch (err) {
-      console.error('Error fetching playlist tracks:', err)
+      logger.error('Error fetching playlist tracks:', err)
 
       // Handle specific playlist access errors
       if (err.message.includes('Access denied')) {
@@ -76,7 +77,7 @@ export function SpotifyProvider({ children }) {
       setLikedSongs(allTracks)
       return allTracks
     } catch (err) {
-      console.error('Error fetching liked songs:', err)
+      logger.error('Error fetching liked songs:', err)
       setLikedSongs([])
       setError(err.message)
       return []
@@ -99,7 +100,7 @@ export function SpotifyProvider({ children }) {
       setSearchResults(results)
       return results
     } catch (err) {
-      console.error('Error searching:', err)
+      logger.error('Error searching:', err)
       setSearchResults({ tracks: [], albums: [], artists: [] })
       setError(err.message)
       return { tracks: [], albums: [], artists: [] }
@@ -122,7 +123,7 @@ export function SpotifyProvider({ children }) {
       setSearchResults({ tracks, albums, artists })
       return tracks
     } catch (err) {
-      console.error('Error searching:', err)
+      logger.error('Error searching:', err)
       setSearchResults({ tracks: [], albums: [], artists: [] })
       setError(err.message)
       return []
@@ -138,7 +139,7 @@ export function SpotifyProvider({ children }) {
       setUserProfile(profile)
       return profile
     } catch (err) {
-      console.error('Error fetching user profile:', err)
+      logger.error('Error fetching user profile:', err)
       setError(err.message)
       return null
     }

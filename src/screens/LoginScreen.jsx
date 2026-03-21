@@ -32,7 +32,7 @@ function LoginScreen() {
   const loginState = getLoginState()
 
   return (
-    <div className="login-screen">
+    <div className="login-screen" aria-busy={isLoading}>
       <div className="login-header">
         <div className="spotify-icon">PP</div>
         <div className="login-title">Connect Spotify</div>
@@ -56,9 +56,12 @@ function LoginScreen() {
           disabled={isLoading}
         >
           {isLoading ? (
-            <span className="loading-dots">
-              <span>.</span><span>.</span><span>.</span>
-            </span>
+            <>
+              <span className="button-icon">Sync</span>
+              <span className="loading-dots">
+                <span>.</span><span>.</span><span>.</span>
+              </span>
+            </>
           ) : (
             <>
               <span className="button-icon">Play</span>
@@ -69,7 +72,7 @@ function LoginScreen() {
       </div>
 
       <div className="login-footer">
-        Press SELECT to connect
+        {isLoading ? 'Opening Spotify authorization...' : 'Press SELECT to connect'}
       </div>
     </div>
   )

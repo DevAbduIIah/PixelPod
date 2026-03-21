@@ -9,6 +9,7 @@ import {
   updateRepeatMode,
   updatePlaybackVolume
 } from '../services/playbackService'
+import { logger } from '../utils/logger'
 
 const PlaybackContext = createContext(null)
 
@@ -106,7 +107,7 @@ export function PlaybackProvider({ children }) {
 
         // Device ready
         player.addListener('ready', ({ device_id }) => {
-          console.log('Spotify player ready with device ID:', device_id)
+          logger.info('Spotify player ready with device ID:', device_id)
           setDeviceId(device_id)
           setIsReady(true)
           // Transfer playback to this device without autoplay
@@ -137,47 +138,45 @@ export function PlaybackProvider({ children }) {
 
         // Device not ready
         player.addListener('not_ready', ({ device_id }) => {
-          console.warn('Device not ready:', device_id)
+          logger.warn('Device not ready:', device_id)
           setIsReady(false)
         })
 
         // Error handlers
         player.addListener('initialization_error', (e) => {
-          console.error('Initialization error:', e)
+          logger.error('Initialization error:', e)
           setError(`Initialization error: ${e.message}`)
         })
 
         player.addListener('authentication_error', (e) => {
-          console.error('Authentication error:', e)
+          logger.error('Authentication error:', e)
           setError(`Authentication error: ${e.message}`)
         })
 
         player.addListener('account_error', (e) => {
-          console.error('Account error:', e)
+          logger.error('Account error:', e)
           setError(`Account error: ${e.message}`)
         })
 
         player.addListener('playback_error', (e) => {
-          console.error('Playback error:', e)
+          logger.error('Playback error:', e)
           setError(`Playback error: ${e.message}`)
         })
 
         // Connect player
         player.connect().then((success) => {
-          if (success) {
-            console.log('Spotify player connected successfully')
-          } else {
-            console.error('Failed to connect Spotify player')
+          if (!success) {
+            logger.error('Failed to connect Spotify player')
             setError('Failed to connect to Spotify player')
             initializingRef.current = false
           }
         }).catch((err) => {
-          console.error('Error connecting to Spotify:', err)
+          logger.error('Error connecting to Spotify:', err)
           setError(`Failed to connect to Spotify: ${err.message}`)
           initializingRef.current = false
         })
       } catch (err) {
-        console.error('Error creating player:', err)
+        logger.error('Error creating player:', err)
         setError(`Error creating player: ${err.message}`)
         initializingRef.current = false
       }
@@ -192,6 +191,7 @@ export function PlaybackProvider({ children }) {
       if (playerRef.current) {
         playerRef.current.disconnect?.()
       }
+      window.onSpotifyWebPlaybackSDKReady = undefined
     }
   }, [isAuthenticated])
 
@@ -199,9 +199,8 @@ export function PlaybackProvider({ children }) {
   const transferPlayback = useCallback(async (deviceId, authToken) => {
     try {
       await transferPlaybackToDevice(deviceId, authToken)
-      console.log('Playback transferred to device:', deviceId)
     } catch (err) {
-      console.error('Error transferring playback:', err)
+      logger.error('Error transferring playback:', err)
     }
   }, [])
 
@@ -224,19 +223,15 @@ export function PlaybackProvider({ children }) {
 
       if (!deviceId) {
         setError('No playback device available. Please wait for Spotify to connect.')
-        console.error('Cannot play - no deviceId. Player ready:', isReady, 'Player ref:', playerRef.current)
+        logger.warn('Cannot play without a ready playback device.')
         setIsLoading(false)
         return
       }
 
       let requestBody
       if (contextUri) {
-        // Play from context (playlist/album) with offset for shuffle support
-        console.log('Playing from context:', contextUri, 'at offset:', offset)
         requestBody = { contextUri, offset }
       } else {
-        // Play single track (for search results)
-        console.log('Playing single track:', trackUri, 'on device:', deviceId)
         requestBody = { trackUri }
       }
 
@@ -248,11 +243,10 @@ export function PlaybackProvider({ children }) {
         offset: requestBody.offset
       })
 
-      console.log('Track playing successfully')
       setError(null)
       setIsPlaying(true)
     } catch (err) {
-      console.error('Playback error:', err)
+      logger.error('Playback error:', err)
       setError(`Playback error: ${err.message}`)
       setIsLoading(false)
     }
@@ -327,14 +321,12 @@ export function PlaybackProvider({ children }) {
       }
 
       const newShuffleState = !shuffleEnabled
-      console.log('Toggling shuffle to:', newShuffleState, 'on device:', deviceId)
 
       await updateShuffleState({ token, deviceId, enabled: newShuffleState })
       setShuffleEnabled(newShuffleState)
       setError(null)
-      console.log('Shuffle set to:', newShuffleState)
     } catch (err) {
-      console.error('Shuffle error:', err)
+      logger.error('Shuffle error:', err)
       if (err.message.includes('Player command failed: No active device')) {
         setError('Start playing a track first')
       } else if (err.message.includes('403')) {
@@ -361,13 +353,12 @@ export function PlaybackProvider({ children }) {
 
       const currentIndex = REPEAT_MODES.indexOf(repeatMode)
       const nextMode = REPEAT_MODES[(currentIndex + 1) % REPEAT_MODES.length]
-      console.log('Cycling repeat mode to:', nextMode)
 
       await updateRepeatMode({ token, deviceId, mode: nextMode })
       setRepeatModeState(nextMode)
       setError(null)
-      console.log('Repeat set to:', nextMode)
     } catch (err) {
+      logger.error('Repeat error:', err)
       if (err.message.includes('Player command failed: No active device')) {
         setError('Start playing a track first')
       } else if (err.message.includes('403')) {
@@ -394,7 +385,7 @@ export function PlaybackProvider({ children }) {
 
       await updatePlaybackVolume({ token, deviceId, volumePercent: clampedVolume })
     } catch (err) {
-      console.error('Volume error:', err)
+      logger.error('Volume error:', err)
     }
   }, [deviceId])
 

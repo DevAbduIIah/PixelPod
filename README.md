@@ -2,7 +2,7 @@
 
 PixelPod is an iPod-inspired Spotify player built with React, Vite, and Express. It recreates the feel of navigating music on a classic click-wheel device while using Spotify for authentication, library access, search, and playback.
 
-The app includes a custom iPod-style interface, Spotify OAuth login, playlist browsing, liked songs, track search, and in-browser playback through the Spotify Web Playback SDK.
+The app includes a custom iPod-style interface, Spotify OAuth login, playlist browsing, liked songs, track search, in-browser playback through the Spotify Web Playback SDK, and a lightweight automated test suite.
 
 ## Features
 
@@ -14,6 +14,7 @@ The app includes a custom iPod-style interface, Spotify OAuth login, playlist br
 - Search Spotify tracks from the app
 - Now Playing screen with album art and playback progress
 - Keyboard support for navigating the click-wheel interface
+- Phase-tested service and UI coverage with Vitest + Testing Library
 
 ## Tech Stack
 
@@ -78,9 +79,14 @@ PORT=3001
 Optional frontend overrides:
 
 ```env
-# Leave empty to use the Vite proxy during local development
+# Leave empty to use the same origin.
+# In local development, the Vite proxy forwards /api to VITE_API_PROXY_TARGET.
 VITE_API_BASE_URL=
 VITE_API_PROXY_TARGET=http://127.0.0.1:3001
+
+# Optional production-friendly token storage mode
+# Defaults to local in development and session in production
+VITE_TOKEN_STORAGE=session
 ```
 
 4. Start the frontend and backend together:
@@ -109,11 +115,21 @@ After creating the app, copy the Client ID and Client Secret into your local `.e
 
 - `npm run dev` starts the Vite frontend on `127.0.0.1:5174`
 - `npm run server` starts the Express auth server on port `3001`
+- `npm start` starts the Express auth server for production or static hosting
 - `npm run dev:full` runs both frontend and backend together
 - `npm run build` creates a production frontend build
 - `npm run preview` previews the Vite production build
+- `npm run test` starts the Vitest watcher
+- `npm run test:run` runs the test suite once
 
 When running only the frontend dev server, `/api/*` requests are proxied to `http://127.0.0.1:3001` by Vite.
+
+## Production Notes
+
+- In production, the Express server can serve the built frontend from `dist/`.
+- `/api/health` returns a simple readiness payload for uptime checks.
+- Token storage defaults to `sessionStorage` in production to avoid keeping Spotify credentials around after the browser session ends.
+- You can restrict CORS with `FRONTEND_ORIGIN` and optional extra origins via `CORS_ORIGIN`.
 
 ## Controls
 
@@ -129,21 +145,12 @@ PixelPod supports both the on-screen click wheel and keyboard input.
 ## How It Works
 
 - The Express server handles Spotify OAuth token exchange and refresh.
-- The React app stores tokens in local storage after login.
+- The React app stores tokens in browser storage after login, with session-scoped storage preferred in production.
 - Spotify data such as playlists, liked songs, and search results is fetched from the Spotify Web API.
 - Playback is handled in the browser using the Spotify Web Playback SDK and an active Spotify device session.
 
 ## Notes and Limitations
 
 - Full playback requires Spotify Premium.
-- The backend server must be running for login and token refresh to work.
-- The app is currently configured for local development.
+- The backend server must be running for login and token refresh to work unless you are serving the built app through `npm start`.
 - `.env`, `node_modules`, and build output are ignored by Git and should not be committed.
-
-## Future Improvements
-
-- Better mobile touch support for wheel rotation
-- Playlist artwork and richer list views
-- Volume controls and scrubbing
-- Better error states around playback device availability
-- Deployment-ready production configuration

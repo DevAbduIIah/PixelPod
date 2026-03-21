@@ -1,4 +1,5 @@
 import { getValidToken } from './spotifyAuth'
+import { logger } from './logger'
 
 const SPOTIFY_API = 'https://api.spotify.com/v1'
 
@@ -20,7 +21,7 @@ async function fetchWithAuth(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    console.error('Spotify API error:', {
+    logger.error('Spotify API error:', {
       endpoint,
       status: response.status,
       statusText: response.statusText,

@@ -23,10 +23,12 @@
 }
 
 .menu-title {
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   color: var(--screen-dark);
   text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
 }
 
 .menu-list {
@@ -58,10 +60,22 @@
   gap: 8px;
   padding: 8px 12px;
   border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
   overflow: hidden;
+}
+
+.menu-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: white;
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menu-item.selected {
@@ -70,18 +84,22 @@
   box-shadow:
     0 2px 8px rgba(74, 144, 226, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  animation: selectPulse 0.3s ease;
+  transform: translateX(4px);
+}
+
+.menu-item.selected::before {
+  opacity: 1;
 }
 
 @keyframes selectPulse {
   0% {
-    transform: scale(1);
+    transform: translateX(4px) scale(1);
   }
-  50% {
-    transform: scale(1.03);
+  40% {
+    transform: translateX(4px) scale(1.02);
   }
   100% {
-    transform: scale(1);
+    transform: translateX(4px) scale(1);
   }
 }
 
@@ -91,23 +109,28 @@
 
 .selector {
   font-size: 10px;
-  animation: blink 1s ease-in-out infinite;
+  animation: selectorPulse 1.5s ease-in-out infinite;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
 }
 
-@keyframes blink {
+@keyframes selectorPulse {
   0%,
   100% {
     opacity: 1;
+    transform: translateX(0);
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.7;
+    transform: translateX(2px);
   }
 }
 
 .item-text {
-  font-size: 9px;
+  font-size: 10px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+  letter-spacing: 0.3px;
 }

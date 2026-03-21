@@ -74,7 +74,16 @@ export function SpotifyProvider({ children }) {
       return allTracks
     } catch (err) {
       console.error('Error fetching playlist tracks:', err)
-      setError(err.message)
+
+      // Handle specific playlist access errors
+      if (err.message.includes('Access denied')) {
+        setError('Cannot access this playlist - it may be private or deleted')
+      } else {
+        setError(err.message)
+      }
+
+      // Set empty tracks so UI doesn't hang
+      setCurrentPlaylistTracks([])
       return []
     } finally {
       setIsLoading(false)

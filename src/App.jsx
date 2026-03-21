@@ -24,13 +24,22 @@ function App() {
   const {
     isReady: playbackReady,
     isPlaying: playbackIsPlaying,
+    isLoading: playbackLoading,
     currentProgress,
     duration,
+    volume,
+    shuffleEnabled,
+    repeatMode,
     play,
     pause,
     togglePlayPause,
     next,
     previous,
+    seek,
+    toggleShuffle,
+    cycleRepeatMode,
+    setVolume,
+    adjustVolume,
     error: playbackError
   } = usePlayback()
 
@@ -41,6 +50,7 @@ function App() {
   const [currentTrackList, setCurrentTrackList] = useState([]) // Track list being played from
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0) // Current position in track list
   const [searchMode, setSearchMode] = useState('keyboard') // 'keyboard' or 'results'
+  const [transitionDirection, setTransitionDirection] = useState('forward') // 'forward' or 'back'
 
   // Sync playback state with real playback
   const isPlaying = playbackIsPlaying
@@ -124,6 +134,14 @@ function App() {
     return []
   }, [currentScreen, currentPlaylistTracks, likedSongs])
 
+  // Helper to navigate forward to a new screen
+  const navigateForward = useCallback((screen) => {
+    setTransitionDirection('forward')
+    setMenuHistory([...menuHistory, currentScreen])
+    setCurrentScreen(screen)
+    setSelectedIndex(0)
+  }, [menuHistory, currentScreen])
+
   const handleSelect = useCallback(async () => {
     console.log('handleSelect called - screen:', currentScreen, 'searchMode:', searchMode, 'selectedIndex:', selectedIndex)
 
@@ -146,8 +164,7 @@ function App() {
           setCurrentTrack(track)
           setCurrentTrackList(searchResults)
           setCurrentTrackIndex(selectedIndex)
-          setMenuHistory([...menuHistory, currentScreen])
-          setCurrentScreen('nowPlaying')
+          navigateForward('nowPlaying')
           setSearchMode('keyboard')
           if (track.uri) {
             play(track.uri)
@@ -165,39 +182,26 @@ function App() {
     // Handle different screens
     if (currentScreen === 'main') {
       if (selectedIndex === 0) { // Music
-        setMenuHistory([...menuHistory, currentScreen])
-        setCurrentScreen('music')
-        setSelectedIndex(0)
+        navigateForward('music')
       } else if (selectedIndex === 1) { // Now Playing
         if (currentTrack) {
-          setMenuHistory([...menuHistory, currentScreen])
-          setCurrentScreen('nowPlaying')
+          navigateForward('nowPlaying')
         }
       } else if (selectedIndex === 2) { // Settings
-        setMenuHistory([...menuHistory, currentScreen])
-        setCurrentScreen('settings')
-        setSelectedIndex(0)
+        navigateForward('settings')
       }
     } else if (currentScreen === 'music') {
       if (selectedIndex === 0) { // Playlists
-        setMenuHistory([...menuHistory, currentScreen])
-        setCurrentScreen('playlists')
-        setSelectedIndex(0)
+        navigateForward('playlists')
       } else if (selectedIndex === 1) { // Liked Songs
-        setMenuHistory([...menuHistory, currentScreen])
-        setCurrentScreen('songs')
-        setSelectedIndex(0)
+        navigateForward('songs')
       } else if (selectedIndex === 2) { // Search
-        setMenuHistory([...menuHistory, currentScreen])
-        setCurrentScreen('search')
-        setSelectedIndex(0)
+        navigateForward('search')
       }
     } else if (currentScreen === 'playlists') {
       if (playlists[selectedIndex]) {
         await selectPlaylist(playlists[selectedIndex])
-        setMenuHistory([...menuHistory, currentScreen])
-        setCurrentScreen('playlistTracks')
-        setSelectedIndex(0)
+        navigateForward('playlistTracks')
       }
     } else if (currentScreen === 'playlistTracks' || currentScreen === 'songs') {
       const tracks = getCurrentTracks()
@@ -206,19 +210,23 @@ function App() {
         setCurrentTrack(selectedTrack)
         setCurrentTrackList(tracks) // Save the track list context
         setCurrentTrackIndex(selectedIndex) // Save the position
-        setMenuHistory([...menuHistory, currentScreen])
-        setCurrentScreen('nowPlaying')
-        // Play the track using real Spotify playback
-        // Don't check playbackReady - let play() handle device availability
-        if (selectedTrack.uri) {
+        navigateForward('nowPlaying')
+
+        // Play from context (playlist) for shuffle/repeat support
+        if (currentScreen === 'playlistTracks' && selectedPlaylist?.uri) {
+          // Play from playlist context with offset
+          play(selectedTrack.uri, selectedPlaylist.uri, selectedIndex)
+        } else {
+          // Play single track (for liked songs or when no context available)
           play(selectedTrack.uri)
         }
       }
     }
   }, [
-    currentScreen, selectedIndex, menuHistory, login,
+    currentScreen, selectedIndex, login,
     spotifyLoading, getMenuItems, getCurrentTracks,
-    playlists, selectPlaylist, currentTrack, play, searchResults, searchMode
+    playlists, selectPlaylist, currentTrack, play, searchResults, searchMode,
+    navigateForward
   ])
 
   const handleSearch = useCallback(async (query) => {
@@ -245,6 +253,7 @@ function App() {
     }
 
     if (menuHistory.length > 0) {
+      setTransitionDirection('back')
       const previousScreen = menuHistory[menuHistory.length - 1]
       setMenuHistory(menuHistory.slice(0, -1))
       setCurrentScreen(previousScreen)
@@ -324,6 +333,16 @@ function App() {
     setCurrentTrackIndex(0)
   }, [logout])
 
+  const handleSeek = useCallback((positionMs) => {
+    if (playbackReady && duration > 0) {
+      seek(positionMs)
+    }
+  }, [playbackReady, duration, seek])
+
+  const handleVolumeChange = useCallback((newVolume) => {
+    setVolume(newVolume)
+  }, [setVolume])
+
   return (
     <div className="app">
       <IPod
@@ -339,13 +358,25 @@ function App() {
         onSkipBack={handleSkipBack}
         currentTrack={currentTrack}
         isPlaying={isPlaying}
+        isLoading={playbackLoading}
         progress={progress}
-        isLoading={spotifyLoading}
+        currentProgress={currentProgress}
+        duration={duration}
+        volume={volume}
+        shuffleEnabled={shuffleEnabled}
+        repeatMode={repeatMode}
+        onSeek={handleSeek}
+        onToggleShuffle={toggleShuffle}
+        onCycleRepeatMode={cycleRepeatMode}
+        onVolumeChange={handleVolumeChange}
+        playbackError={playbackError}
+        playbackReady={playbackReady}
         searchResults={searchResults}
         onSearch={handleSearch}
         searchMode={searchMode}
         userProfile={userProfile}
         onLogout={handleLogout}
+        transitionDirection={transitionDirection}
       />
     </div>
   )

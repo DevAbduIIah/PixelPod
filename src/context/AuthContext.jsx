@@ -51,6 +51,15 @@ export function AuthProvider({ children }) {
       }
 
       if (code && state) {
+        // Prevent double execution (React Strict Mode calls effects twice)
+        const callbackKey = `pixelpod_callback_${state}`
+        if (sessionStorage.getItem(callbackKey)) {
+          // Already processed this callback, clean URL and return
+          window.history.replaceState({}, document.title, '/')
+          return
+        }
+        sessionStorage.setItem(callbackKey, 'processing')
+
         setIsLoading(true)
         try {
           await exchangeCodeForToken(code, state)
@@ -66,6 +75,8 @@ export function AuthProvider({ children }) {
           setIsLoading(false)
           // Clean URL
           window.history.replaceState({}, document.title, '/')
+          // Clean up the callback marker
+          sessionStorage.removeItem(callbackKey)
         }
       }
     }

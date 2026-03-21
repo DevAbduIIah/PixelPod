@@ -131,3 +131,36 @@ export function formatPlaylist(playlist) {
     owner: playlist.owner?.display_name || 'Unknown'
   }
 }
+
+// Format album data for our app
+export function formatAlbum(album) {
+  if (!album) return null
+
+  return {
+    id: album.id,
+    uri: album.uri,
+    type: 'album',
+    title: album.name,
+    artist: album.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+    image: album.images?.[0]?.url || null,
+    imageSmall: album.images?.[2]?.url || album.images?.[0]?.url || null,
+    releaseDate: album.release_date,
+    totalTracks: album.total_tracks
+  }
+}
+
+// Format artist data for our app
+export function formatArtist(artist) {
+  if (!artist) return null
+
+  return {
+    id: artist.id,
+    uri: artist.uri,
+    type: 'artist',
+    name: artist.name,
+    image: artist.images?.[0]?.url || null,
+    imageSmall: artist.images?.[2]?.url || artist.images?.[0]?.url || null,
+    followers: artist.followers?.total || 0,
+    genres: artist.genres || []
+  }
+}

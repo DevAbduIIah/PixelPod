@@ -1,0 +1,201 @@
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import App from '../App'
+
+const mockAuthState = vi.hoisted(() => ({
+  isAuthenticated: true,
+  isLoading: false,
+  login: vi.fn(),
+  logout: vi.fn(),
+  error: null
+}))
+
+const mockSpotifyState = vi.hoisted(() => ({
+  playlists: [],
+  currentPlaylistTracks: [],
+  likedSongs: [],
+  searchResults: { tracks: [], albums: [], artists: [] },
+  selectedPlaylist: null,
+  userProfile: { name: 'Pixel Listener', email: 'pixel@example.com' },
+  isLoading: false,
+  error: null,
+  fetchPlaylists: vi.fn(),
+  fetchLikedSongs: vi.fn(),
+  selectPlaylist: vi.fn(),
+  searchTracks: vi.fn(),
+  fetchUserProfile: vi.fn()
+}))
+
+const mockPlaybackState = vi.hoisted(() => ({
+  isReady: true,
+  isPlaying: false,
+  isLoading: false,
+  currentProgress: 6000,
+  duration: 201000,
+  volume: 50,
+  shuffleEnabled: false,
+  repeatMode: 'off',
+  play: vi.fn(),
+  togglePlayPause: vi.fn(),
+  seek: vi.fn(),
+  toggleShuffle: vi.fn(),
+  cycleRepeatMode: vi.fn(),
+  setVolume: vi.fn(),
+  error: null
+}))
+
+vi.mock('../hooks/useSpotifyAuth', () => ({
+  useSpotifyAuth: () => mockAuthState
+}))
+
+vi.mock('../context/SpotifyContext', () => ({
+  useSpotify: () => mockSpotifyState
+}))
+
+vi.mock('../hooks/usePlayback', () => ({
+  usePlayback: () => mockPlaybackState
+}))
+
+vi.mock('../utils/sounds', () => ({
+  playClickSound: vi.fn(),
+  playSelectSound: vi.fn(),
+  playBackSound: vi.fn(),
+  initAudio: vi.fn()
+}))
+
+function advanceToSettledScreen(ms = 2400) {
+  act(() => {
+    vi.advanceTimersByTime(ms)
+  })
+}
+
+async function clickControl(name) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name }))
+    await Promise.resolve()
+  })
+}
+
+function pressKey(key) {
+  act(() => {
+    fireEvent.keyDown(window, { key })
+  })
+}
+
+describe('App integration', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+
+    const playlist = {
+      id: 'playlist-1',
+      uri: 'spotify:playlist:playlist-1',
+      name: 'Favorites',
+      trackCount: 2,
+      image: null,
+      owner: 'Pixel Listener'
+    }
+
+    const track = {
+      id: 'track-1',
+      uri: 'spotify:track:track-1',
+      title: 'Clarity',
+      artist: 'Zedd, Foxes',
+      album: 'Clarity',
+      albumArt: null,
+      albumArtSmall: null
+    }
+
+    Object.assign(mockAuthState, {
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      error: null
+    })
+
+    Object.assign(mockSpotifyState, {
+      playlists: [playlist],
+      currentPlaylistTracks: [track],
+      likedSongs: [track],
+      searchResults: { tracks: [], albums: [], artists: [] },
+      selectedPlaylist: null,
+      userProfile: { name: 'Pixel Listener', email: 'pixel@example.com' },
+      isLoading: false,
+      error: null,
+      fetchPlaylists: vi.fn(),
+      fetchLikedSongs: vi.fn(),
+      selectPlaylist: vi.fn(async (selectedPlaylist) => {
+        mockSpotifyState.selectedPlaylist = selectedPlaylist
+        return mockSpotifyState.currentPlaylistTracks
+      }),
+      searchTracks: vi.fn(),
+      fetchUserProfile: vi.fn()
+    })
+
+    Object.assign(mockPlaybackState, {
+      isReady: true,
+      isPlaying: false,
+      isLoading: false,
+      currentProgress: 6000,
+      duration: 201000,
+      volume: 50,
+      shuffleEnabled: false,
+      repeatMode: 'off',
+      play: vi.fn(),
+      togglePlayPause: vi.fn(),
+      seek: vi.fn(),
+      toggleShuffle: vi.fn(),
+      cycleRepeatMode: vi.fn(),
+      setVolume: vi.fn(),
+      error: null
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('supports keyboard navigation into Settings and back out to the main menu', () => {
+    render(<App />)
+
+    advanceToSettledScreen()
+    pressKey('ArrowDown')
+    pressKey('ArrowDown')
+    pressKey('Enter')
+    advanceToSettledScreen(400)
+
+    expect(screen.getByText('Version 1.0.0')).toBeInTheDocument()
+
+    pressKey('Escape')
+    advanceToSettledScreen(400)
+
+    expect(screen.getByText('Music')).toBeInTheDocument()
+    expect(mockSpotifyState.fetchUserProfile).toHaveBeenCalled()
+  })
+
+  it('navigates from playlists into Now Playing and starts playback with playlist context', async () => {
+    render(<App />)
+
+    advanceToSettledScreen()
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    mockSpotifyState.selectedPlaylist = mockSpotifyState.playlists[0]
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    expect(mockSpotifyState.selectPlaylist).toHaveBeenCalledWith(mockSpotifyState.playlists[0])
+    expect(mockPlaybackState.play).toHaveBeenCalledWith(
+      'spotify:track:track-1',
+      'spotify:playlist:playlist-1',
+      0
+    )
+    expect(screen.getByText('Now Playing')).toBeInTheDocument()
+    expect(screen.getByText('Progress')).toBeInTheDocument()
+  })
+})

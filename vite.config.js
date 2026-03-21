@@ -6,6 +6,14 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: './src/test/setup.js',
+      css: true,
+      restoreMocks: true,
+      clearMocks: true
+    },
     server: {
       host: '127.0.0.1',
       port: 5174,

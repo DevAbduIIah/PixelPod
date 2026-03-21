@@ -130,7 +130,7 @@ function SettingsScreen({ userProfile, onLogout, theme, skin, onThemeChange, onS
             <span className="item-text">Classic iPod-inspired Spotify player with wheel navigation.</span>
           </div>
           <div className="settings-item">
-            <span className="item-text">Phase 5 adds live appearance switching and a playback visualizer.</span>
+            <span className="item-text">Built for browsing playlists, search, and playback in a familiar iPod-style interface.</span>
           </div>
         </div>
 

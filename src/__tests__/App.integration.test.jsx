@@ -198,4 +198,87 @@ describe('App integration', () => {
     expect(screen.getByText('Now Playing')).toBeInTheDocument()
     expect(screen.getByText('Progress')).toBeInTheDocument()
   })
+
+  it('toggles liked songs shuffle locally without restarting the current song', async () => {
+    mockPlaybackState.isPlaying = true
+
+    render(<App />)
+
+    advanceToSettledScreen()
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    pressKey('ArrowDown')
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    expect(mockPlaybackState.play).toHaveBeenCalledTimes(1)
+    expect(mockPlaybackState.play).toHaveBeenCalledWith(
+      'spotify:track:track-1',
+      null,
+      0,
+      ['spotify:track:track-1']
+    )
+
+    await clickControl('Shuffle off')
+
+    expect(mockPlaybackState.toggleShuffle).toHaveBeenCalledWith({
+      syncRemote: false,
+      forceState: true
+    })
+    expect(mockPlaybackState.play).toHaveBeenCalledTimes(2)
+    expect(mockPlaybackState.play).toHaveBeenLastCalledWith(
+      'spotify:track:track-1',
+      null,
+      0,
+      ['spotify:track:track-1'],
+      6000
+    )
+
+    await clickControl('Shuffle on')
+
+    expect(mockPlaybackState.toggleShuffle).toHaveBeenLastCalledWith({
+      syncRemote: false,
+      forceState: false
+    })
+    expect(mockPlaybackState.play).toHaveBeenCalledTimes(3)
+    expect(mockPlaybackState.play).toHaveBeenLastCalledWith(
+      'spotify:track:track-1',
+      null,
+      0,
+      ['spotify:track:track-1'],
+      6000
+    )
+  })
+
+  it('turns off remote shuffle before starting liked songs queue playback', async () => {
+    mockPlaybackState.shuffleEnabled = true
+
+    render(<App />)
+
+    advanceToSettledScreen()
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    pressKey('ArrowDown')
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    await clickControl('SELECT')
+    advanceToSettledScreen(400)
+
+    expect(mockPlaybackState.toggleShuffle).toHaveBeenCalledWith({
+      syncRemote: true,
+      forceState: false
+    })
+    expect(mockPlaybackState.play).toHaveBeenCalledWith(
+      'spotify:track:track-1',
+      null,
+      0,
+      ['spotify:track:track-1']
+    )
+  })
 })

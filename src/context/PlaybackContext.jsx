@@ -16,6 +16,23 @@ const PlaybackContext = createContext(null)
 // Repeat modes: 'off' | 'context' | 'track'
 const REPEAT_MODES = ['off', 'context', 'track']
 
+function formatPlaybackTrack(track) {
+  if (!track?.uri || !track?.name) {
+    return null
+  }
+
+  return {
+    id: track.id || track.uri,
+    uri: track.uri,
+    title: track.name,
+    artist: track.artists?.map((artist) => artist.name).join(', ') || 'Unknown Artist',
+    album: track.album?.name || 'Unknown Album',
+    albumArt: track.album?.images?.[0]?.url || null,
+    albumArtSmall: track.album?.images?.[2]?.url || track.album?.images?.[0]?.url || null,
+    duration: track.duration_ms ?? 0
+  }
+}
+
 export function PlaybackProvider({ children }) {
   const { isAuthenticated } = useAuth()
   const [deviceId, setDeviceId] = useState(null)
@@ -28,6 +45,7 @@ export function PlaybackProvider({ children }) {
   const [volume, setVolumeState] = useState(50)
   const [shuffleEnabled, setShuffleEnabled] = useState(false)
   const [repeatMode, setRepeatModeState] = useState('off')
+  const [currentTrack, setCurrentTrack] = useState(null)
   const playerRef = useRef(null)
   const initializingRef = useRef(false)
   const progressIntervalRef = useRef(null)
@@ -85,24 +103,31 @@ export function PlaybackProvider({ children }) {
 
         playerRef.current = player
 
-        // Track player state changes
-        player.addListener('player_state_changed', (state) => {
-          if (!state) return
+        const syncPlaybackState = (state) => {
+          if (!state) {
+            return
+          }
 
           setIsPlaying(!state.paused)
           setCurrentProgress(state.position)
           setDuration(state.duration)
+          setCurrentTrack(formatPlaybackTrack(state.track_window?.current_track))
           setIsLoading(false)
 
-          // Sync shuffle and repeat state from Spotify
           if (state.shuffle !== undefined) {
             setShuffleEnabled(state.shuffle)
           }
+
           if (state.repeat_mode !== undefined) {
-            // Spotify: 0 = off, 1 = context, 2 = track
             const modes = ['off', 'context', 'track']
             setRepeatModeState(modes[state.repeat_mode] || 'off')
           }
+        }
+
+        // Track player state changes
+        player.addListener('player_state_changed', (state) => {
+          if (!state) return
+          syncPlaybackState(state)
         })
 
         // Device ready
@@ -120,17 +145,7 @@ export function PlaybackProvider({ children }) {
           progressIntervalRef.current = setInterval(() => {
             player.getCurrentState().then(state => {
               if (state) {
-                setIsPlaying(!state.paused)
-                setCurrentProgress(state.position)
-                setDuration(state.duration)
-                // Also sync shuffle and repeat state
-                if (state.shuffle !== undefined) {
-                  setShuffleEnabled(state.shuffle)
-                }
-                if (state.repeat_mode !== undefined) {
-                  const modes = ['off', 'context', 'track']
-                  setRepeatModeState(modes[state.repeat_mode] || 'off')
-                }
+                syncPlaybackState(state)
               }
             })
           }, 1000)
@@ -205,8 +220,8 @@ export function PlaybackProvider({ children }) {
   }, [])
 
   // Play a track (with optional context for shuffle/repeat support)
-  const play = useCallback(async (trackUri, contextUri = null, offset = 0) => {
-    if (!trackUri && !contextUri) {
+  const play = useCallback(async (trackUri, contextUri = null, offset = 0, trackUris = null, positionMs = null) => {
+    if (!trackUri && !contextUri && (!trackUris || trackUris.length === 0)) {
       setError('No track or context URI provided')
       return
     }
@@ -239,8 +254,10 @@ export function PlaybackProvider({ children }) {
         token,
         deviceId,
         trackUri: requestBody.trackUri,
+        trackUris,
         contextUri: requestBody.contextUri,
-        offset: requestBody.offset
+        offset: requestBody.offset,
+        positionMs
       })
 
       setError(null)
@@ -307,24 +324,38 @@ export function PlaybackProvider({ children }) {
   }, [])
 
   // Toggle shuffle
-  const toggleShuffle = useCallback(async () => {
+  const toggleShuffle = useCallback(async (options = {}) => {
+    const {
+      syncRemote = true,
+      forceState
+    } = options
+
+    const newShuffleState = typeof forceState === 'boolean'
+      ? forceState
+      : !shuffleEnabled
+
+    if (!syncRemote) {
+      setShuffleEnabled(newShuffleState)
+      setError(null)
+      return newShuffleState
+    }
+
     if (!deviceId) {
       setError('No playback device available')
-      return
+      return shuffleEnabled
     }
 
     try {
       const token = await getValidToken()
       if (!token) {
         setError('Not authenticated')
-        return
+        return shuffleEnabled
       }
-
-      const newShuffleState = !shuffleEnabled
 
       await updateShuffleState({ token, deviceId, enabled: newShuffleState })
       setShuffleEnabled(newShuffleState)
       setError(null)
+      return newShuffleState
     } catch (err) {
       logger.error('Shuffle error:', err)
       if (err.message.includes('Player command failed: No active device')) {
@@ -334,6 +365,7 @@ export function PlaybackProvider({ children }) {
       } else {
         setError(`Shuffle error: ${err.message}`)
       }
+      return shuffleEnabled
     }
   }, [shuffleEnabled, deviceId])
 
@@ -402,6 +434,7 @@ export function PlaybackProvider({ children }) {
     duration,
     deviceId,
     error,
+    currentTrack,
     volume,
     shuffleEnabled,
     repeatMode,

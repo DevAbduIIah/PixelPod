@@ -1,9 +1,19 @@
-import { getValidToken } from './spotifyAuth'
+import { clearTokens, getStoredTokens, getValidToken, tokenHasScopes } from './spotifyAuth'
 import { logger } from './logger'
 
 const SPOTIFY_API = 'https://api.spotify.com/v1'
 
 async function fetchWithAuth(endpoint, options = {}) {
+  const storedTokens = getStoredTokens()
+
+  if (
+    (endpoint.startsWith('/me/playlists') || endpoint.startsWith('/playlists/')) &&
+    !tokenHasScopes(storedTokens, ['playlist-read-private'])
+  ) {
+    clearTokens()
+    throw new Error('Spotify playlist permission is missing - restart the server, then connect Spotify again')
+  }
+
   const token = await getValidToken()
 
   if (!token) {
@@ -21,22 +31,43 @@ async function fetchWithAuth(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
+    const spotifyMessage = error.error?.message || ''
+    const normalizedMessage = spotifyMessage.toLowerCase()
+    const authenticateHeader = response.headers.get('www-authenticate') || ''
+    const missingScopeMatch = authenticateHeader.match(/scope="([^"]+)"/i)
+    const requiredScope = missingScopeMatch?.[1] || ''
+    const isPlaylistScopeFailure = response.status === 403 && (
+      endpoint.startsWith('/playlists/') ||
+      endpoint.startsWith('/me/playlists')
+    )
     logger.error('Spotify API error:', {
       endpoint,
       status: response.status,
       statusText: response.statusText,
-      error
+      error,
+      authenticateHeader
     })
 
     // Handle specific error cases
     if (response.status === 401) {
-      throw new Error('Token expired - please log out and log back in')
+      clearTokens()
+      throw new Error('Spotify session expired - connect Spotify again')
     }
     if (response.status === 403) {
-      throw new Error('Access denied - try logging out and back in')
+      if (requiredScope) {
+        clearTokens()
+        throw new Error(`Spotify scope "${requiredScope}" is missing - restart the server, then connect Spotify again`)
+      }
+
+      if (normalizedMessage.includes('scope') || isPlaylistScopeFailure) {
+        clearTokens()
+        throw new Error('Spotify permissions changed - connect Spotify again')
+      }
+
+      throw new Error(spotifyMessage || 'Access denied - reconnect Spotify and try again')
     }
 
-    throw new Error(error.error?.message || `API error: ${response.status}`)
+    throw new Error(spotifyMessage || `API error: ${response.status}`)
   }
 
   return response.json()
@@ -54,7 +85,7 @@ export async function getUserPlaylists(limit = 50, offset = 0) {
 
 // Get playlist tracks
 export async function getPlaylistTracks(playlistId, limit = 50, offset = 0) {
-  return fetchWithAuth(`/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`)
+  return fetchWithAuth(`/playlists/${playlistId}/items?limit=${limit}&offset=${offset}`)
 }
 
 // Get user's saved tracks (liked songs)
@@ -103,7 +134,11 @@ export function formatTrack(track) {
   if (!track) return null
 
   // Handle both regular track and saved track format
-  const actualTrack = track.track || track
+  const actualTrack = track.track ?? track
+
+  if (!actualTrack?.uri || !actualTrack?.name) {
+    return null
+  }
 
   return {
     id: actualTrack.id,
@@ -122,12 +157,20 @@ export function formatTrack(track) {
 export function formatPlaylist(playlist) {
   if (!playlist) return null
 
+  const trackTotal = Number.isFinite(playlist.trackCount)
+    ? playlist.trackCount
+    : Number.isFinite(playlist.tracks?.total)
+      ? playlist.tracks.total
+      : Array.isArray(playlist.tracks?.items)
+        ? playlist.tracks.items.length
+        : undefined
+
   return {
     id: playlist.id,
     uri: playlist.uri, // Add URI for context playback
     name: playlist.name,
     description: playlist.description,
-    trackCount: playlist.tracks?.total || 0,
+    trackCount: trackTotal,
     image: playlist.images?.[0]?.url || null,
     owner: playlist.owner?.display_name || 'Unknown'
   }

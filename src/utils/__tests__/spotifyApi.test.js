@@ -37,6 +37,11 @@ describe('spotifyApi formatters', () => {
     })
   })
 
+  it('skips unavailable playlist entries that do not contain a playable track URI', () => {
+    expect(formatTrack({ track: null })).toBeNull()
+    expect(formatTrack({ id: 'broken-item' })).toBeNull()
+  })
+
   it('formats playlists, albums, and artists with sensible fallbacks', () => {
     expect(formatPlaylist({
       id: 'playlist-1',

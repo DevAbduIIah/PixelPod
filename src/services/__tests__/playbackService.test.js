@@ -39,6 +39,64 @@ describe('playbackService', () => {
     )
   })
 
+  it('starts a queue playback session when a custom URI list is provided', async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 204,
+      json: vi.fn()
+    })
+
+    await startPlaybackSession({
+      token: 'token-queue',
+      deviceId: 'device-queue',
+      trackUris: ['spotify:track:first', 'spotify:track:second']
+    })
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.spotify.com/v1/me/player/play?device_id=device-queue',
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: 'Bearer token-queue',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          uris: ['spotify:track:first', 'spotify:track:second']
+        })
+      }
+    )
+  })
+
+  it('starts a queue playback session at the requested playback position', async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 204,
+      json: vi.fn()
+    })
+
+    await startPlaybackSession({
+      token: 'token-position',
+      deviceId: 'device-position',
+      trackUris: ['spotify:track:first', 'spotify:track:second'],
+      positionMs: 42000
+    })
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.spotify.com/v1/me/player/play?device_id=device-position',
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: 'Bearer token-position',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          uris: ['spotify:track:first', 'spotify:track:second'],
+          position_ms: 42000
+        })
+      }
+    )
+  })
+
   it('starts context playback with a playlist offset for queue-aware playback', async () => {
     fetch.mockResolvedValue({
       ok: true,

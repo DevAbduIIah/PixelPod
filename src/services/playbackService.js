@@ -28,14 +28,16 @@ export function transferPlaybackToDevice(deviceId, token) {
   })
 }
 
-export function startPlaybackSession({ token, deviceId, trackUri, contextUri, offset = 0 }) {
+export function startPlaybackSession({ token, deviceId, trackUri, trackUris, contextUri, offset = 0, positionMs }) {
   const requestBody = contextUri
     ? {
         context_uri: contextUri,
-        offset: { position: offset }
+        offset: { position: offset },
+        ...(Number.isFinite(positionMs) ? { position_ms: positionMs } : {})
       }
     : {
-        uris: [trackUri]
+        uris: trackUris?.length ? trackUris : [trackUri],
+        ...(Number.isFinite(positionMs) ? { position_ms: positionMs } : {})
       }
 
   return sendPlaybackRequest(`/play?device_id=${deviceId}`, {

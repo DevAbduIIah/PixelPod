@@ -132,10 +132,12 @@ export const getStoredTokens = () => {
 }
 
 export const storeTokens = (tokens) => {
+  const existingTokens = getStoredTokens()
   const data = {
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,
-    expires_at: Date.now() + (tokens.expires_in * 1000)
+    expires_at: Date.now() + (tokens.expires_in * 1000),
+    scope: tokens.scope || existingTokens?.scope || ''
   }
 
   const primaryStorage = getPrimaryStorage()
@@ -157,6 +159,15 @@ export const clearTokens = () => {
 export const isTokenExpired = (tokens) => {
   if (!tokens || !tokens.expires_at) return true
   return Date.now() >= tokens.expires_at - 60000
+}
+
+export const tokenHasScopes = (tokens, requiredScopes = []) => {
+  if (!tokens?.scope) {
+    return false
+  }
+
+  const grantedScopes = new Set(tokens.scope.split(/\s+/).filter(Boolean))
+  return requiredScopes.every((scope) => grantedScopes.has(scope))
 }
 
 export const initiateLogin = async () => {

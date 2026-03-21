@@ -31,6 +31,7 @@ function App() {
     isLoading: playbackLoading,
     currentProgress,
     duration,
+    currentTrack: playbackTrack,
     volume,
     shuffleEnabled,
     repeatMode,
@@ -49,12 +50,17 @@ function App() {
   const [currentTrack, setCurrentTrack] = useState(null)
   const [currentTrackList, setCurrentTrackList] = useState([])
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0)
+  const [currentSourceTracks, setCurrentSourceTracks] = useState([])
+  const [currentPlaybackSource, setCurrentPlaybackSource] = useState(null)
+  const [queueShuffleEnabled, setQueueShuffleEnabled] = useState(false)
   const [searchMode, setSearchMode] = useState('keyboard')
   const [transitionDirection, setTransitionDirection] = useState('forward')
   const [theme, setTheme] = useState('classic')
   const [skin, setSkin] = useState('silver')
 
   const isPlaying = playbackIsPlaying
+  const isQueuePlayback = currentPlaybackSource?.kind === 'queue'
+  const effectiveShuffleEnabled = isQueuePlayback ? queueShuffleEnabled : shuffleEnabled
   const progress = duration > 0 ? (currentProgress / duration) * 100 : 0
 
   useEffect(() => {
@@ -106,11 +112,20 @@ function App() {
     if (activeError) {
       const normalizedError = activeError.toLowerCase()
 
-      if (normalizedError.includes('expired') || normalizedError.includes('not authenticated') || normalizedError.includes('token')) {
+      if (
+        normalizedError.includes('expired') ||
+        normalizedError.includes('not authenticated') ||
+        normalizedError.includes('token') ||
+        normalizedError.includes('permissions changed') ||
+        normalizedError.includes('connect spotify again')
+      ) {
         return createStatusItem('error', 'Login Expired', 'Connect Spotify again to refresh your library.', 'AUTH')
       }
 
-      if (screenName === 'playlistTracks' && normalizedError.includes('access')) {
+      if (
+        screenName === 'playlistTracks' &&
+        (normalizedError.includes('private') || normalizedError.includes('deleted') || normalizedError.includes('not found'))
+      ) {
         return createStatusItem('error', 'Playlist Unavailable', 'This playlist could not be opened right now.', 'LOCK')
       }
 
@@ -165,6 +180,32 @@ function App() {
     }
   }, [isAuthenticated, currentScreen, likedSongs.length, fetchLikedSongs])
 
+  useEffect(() => {
+    if (!playbackTrack?.uri) {
+      return
+    }
+
+    const matchedTrack = currentTrackList.find((track) => (
+      track?.id === playbackTrack.id || track?.uri === playbackTrack.uri
+    ))
+
+    if (matchedTrack) {
+      setCurrentTrack(matchedTrack)
+
+      const matchedIndex = currentTrackList.findIndex((track) => (
+        track?.id === playbackTrack.id || track?.uri === playbackTrack.uri
+      ))
+
+      if (matchedIndex >= 0) {
+        setCurrentTrackIndex(matchedIndex)
+      }
+
+      return
+    }
+
+    setCurrentTrack(playbackTrack)
+  }, [playbackTrack, currentTrackList])
+
   const getMenuItems = useCallback(() => {
     switch (currentScreen) {
       case 'main':
@@ -201,6 +242,54 @@ function App() {
     return []
   }, [currentScreen, currentPlaylistTracks, likedSongs])
 
+  const createLinearQueue = useCallback((tracks, selectedTrackIndex) => {
+    if (!Array.isArray(tracks) || tracks.length === 0) {
+      return []
+    }
+
+    return [
+      ...tracks.slice(selectedTrackIndex),
+      ...tracks.slice(0, selectedTrackIndex)
+    ]
+  }, [])
+
+  const shuffleTracks = useCallback((tracks) => {
+    const shuffledTracks = [...tracks]
+
+    for (let index = shuffledTracks.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1))
+      ;[shuffledTracks[index], shuffledTracks[randomIndex]] = [shuffledTracks[randomIndex], shuffledTracks[index]]
+    }
+
+    return shuffledTracks
+  }, [])
+
+  const createLikedSongsQueue = useCallback((tracks, selectedTrackId, shouldShuffle) => {
+    const playableTracks = tracks.filter((track) => track?.uri)
+    const selectedTrackIndex = playableTracks.findIndex((track) => track.id === selectedTrackId)
+    const safeSelectedTrackIndex = selectedTrackIndex >= 0 ? selectedTrackIndex : 0
+    const linearQueue = createLinearQueue(playableTracks, safeSelectedTrackIndex)
+
+    if (!shouldShuffle || linearQueue.length <= 1) {
+      return linearQueue
+    }
+
+    const [selectedTrack, ...remainingTracks] = linearQueue
+    return [selectedTrack, ...shuffleTracks(remainingTracks)]
+  }, [createLinearQueue, shuffleTracks])
+
+  const applyTrackSelection = useCallback((tracks, selectedTrackIndex, playbackSource) => {
+    const selectedTrack = tracks[selectedTrackIndex]
+    if (!selectedTrack) {
+      return
+    }
+
+    setCurrentTrack(selectedTrack)
+    setCurrentTrackList(tracks)
+    setCurrentTrackIndex(selectedTrackIndex)
+    setCurrentPlaybackSource(playbackSource)
+  }, [])
+
   const navigateForward = useCallback((screen) => {
     setTransitionDirection('forward')
     setMenuHistory((previousHistory) => [...previousHistory, currentScreen])
@@ -223,9 +312,8 @@ function App() {
         const track = searchTrackResults[selectedIndex]
 
         if (track) {
-          setCurrentTrack(track)
-          setCurrentTrackList(searchTrackResults)
-          setCurrentTrackIndex(selectedIndex)
+          setCurrentSourceTracks(searchTrackResults)
+          applyTrackSelection(searchTrackResults, selectedIndex, { kind: 'search' })
           navigateForward('nowPlaying')
           setSearchMode('keyboard')
 
@@ -268,15 +356,34 @@ function App() {
       const tracks = getCurrentTracks()
       if (tracks[selectedIndex]) {
         const selectedTrack = tracks[selectedIndex]
-        setCurrentTrack(selectedTrack)
-        setCurrentTrackList(tracks)
-        setCurrentTrackIndex(selectedIndex)
         navigateForward('nowPlaying')
 
         if (currentScreen === 'playlistTracks' && selectedPlaylist?.uri) {
+          setCurrentSourceTracks(tracks)
+          applyTrackSelection(tracks, selectedIndex, {
+            kind: 'playlist',
+            contextUri: selectedPlaylist.uri
+          })
           play(selectedTrack.uri, selectedPlaylist.uri, selectedIndex)
         } else {
-          play(selectedTrack.uri)
+          const likedSongsQueue = createLikedSongsQueue(tracks, selectedTrack.id, queueShuffleEnabled)
+          const queueUris = likedSongsQueue.map((track) => track.uri).filter(Boolean)
+
+          setCurrentSourceTracks(tracks)
+          applyTrackSelection(likedSongsQueue, 0, {
+            kind: 'queue'
+          })
+
+          if (queueUris.length > 0) {
+            if (shuffleEnabled) {
+              await toggleShuffle({
+                syncRemote: true,
+                forceState: false
+              })
+            }
+
+            play(queueUris[0], null, 0, queueUris)
+          }
         }
       }
     }
@@ -294,7 +401,12 @@ function App() {
     playlists,
     selectPlaylist,
     getCurrentTracks,
-    selectedPlaylist
+    selectedPlaylist,
+    createLikedSongsQueue,
+    toggleShuffle,
+    shuffleEnabled,
+    queueShuffleEnabled,
+    applyTrackSelection
   ])
 
   const handleSearch = useCallback(async (query) => {
@@ -363,12 +475,37 @@ function App() {
       const nextTrack = currentTrackList[nextIndex]
 
       if (nextTrack && nextTrack.uri) {
+        if (currentPlaybackSource?.kind === 'playlist' && currentPlaybackSource.contextUri) {
+          setCurrentTrack(nextTrack)
+          setCurrentTrackIndex(nextIndex)
+          play(nextTrack.uri, currentPlaybackSource.contextUri, nextIndex)
+          return
+        }
+
+        if (currentPlaybackSource?.kind === 'queue') {
+          const reorderedQueue = [
+            ...currentTrackList.slice(nextIndex),
+            ...currentTrackList.slice(0, nextIndex)
+          ]
+          const queueUris = reorderedQueue.map((track) => track.uri).filter(Boolean)
+
+          setCurrentTrack(reorderedQueue[0])
+          setCurrentTrackList(reorderedQueue)
+          setCurrentTrackIndex(0)
+
+          if (queueUris.length > 0) {
+            play(queueUris[0], null, 0, queueUris)
+          }
+
+          return
+        }
+
         setCurrentTrack(nextTrack)
         setCurrentTrackIndex(nextIndex)
         play(nextTrack.uri)
       }
     }
-  }, [currentTrack, playbackReady, currentTrackList, currentTrackIndex, play])
+  }, [currentTrack, playbackReady, currentTrackList, currentTrackIndex, play, currentPlaybackSource])
 
   const handleSkipBack = useCallback(() => {
     if (currentTrack && playbackReady && currentTrackList.length > 0) {
@@ -376,12 +513,37 @@ function App() {
       const previousTrack = currentTrackList[previousIndex]
 
       if (previousTrack && previousTrack.uri) {
+        if (currentPlaybackSource?.kind === 'playlist' && currentPlaybackSource.contextUri) {
+          setCurrentTrack(previousTrack)
+          setCurrentTrackIndex(previousIndex)
+          play(previousTrack.uri, currentPlaybackSource.contextUri, previousIndex)
+          return
+        }
+
+        if (currentPlaybackSource?.kind === 'queue') {
+          const reorderedQueue = [
+            ...currentTrackList.slice(previousIndex),
+            ...currentTrackList.slice(0, previousIndex)
+          ]
+          const queueUris = reorderedQueue.map((track) => track.uri).filter(Boolean)
+
+          setCurrentTrack(reorderedQueue[0])
+          setCurrentTrackList(reorderedQueue)
+          setCurrentTrackIndex(0)
+
+          if (queueUris.length > 0) {
+            play(queueUris[0], null, 0, queueUris)
+          }
+
+          return
+        }
+
         setCurrentTrack(previousTrack)
         setCurrentTrackIndex(previousIndex)
         play(previousTrack.uri)
       }
     }
-  }, [currentTrack, playbackReady, currentTrackList, currentTrackIndex, play])
+  }, [currentTrack, playbackReady, currentTrackList, currentTrackIndex, play, currentPlaybackSource])
 
   const handlePlayPause = useCallback(() => {
     if (currentTrack && playbackReady) {
@@ -397,6 +559,9 @@ function App() {
     setCurrentTrack(null)
     setCurrentTrackList([])
     setCurrentTrackIndex(0)
+    setCurrentSourceTracks([])
+    setCurrentPlaybackSource(null)
+    setQueueShuffleEnabled(false)
   }, [logout])
 
   const handleSeek = useCallback((positionMs) => {
@@ -408,6 +573,44 @@ function App() {
   const handleVolumeChange = useCallback((newVolume) => {
     setVolume(newVolume)
   }, [setVolume])
+
+  const handleToggleShuffle = useCallback(async () => {
+    const nextShuffleState = !effectiveShuffleEnabled
+    const isQueuePlaybackActive = currentPlaybackSource?.kind === 'queue'
+      && currentSourceTracks.length > 0
+      && Boolean(currentTrack?.id)
+
+    await toggleShuffle({
+      syncRemote: !isQueuePlaybackActive,
+      forceState: nextShuffleState
+    })
+
+    if (!isQueuePlaybackActive) {
+      return
+    }
+
+    const nextQueue = createLikedSongsQueue(currentSourceTracks, currentTrack.id, nextShuffleState)
+    const nextQueueUris = nextQueue.map((track) => track.uri).filter(Boolean)
+
+    setQueueShuffleEnabled(nextShuffleState)
+    setCurrentTrackList(nextQueue)
+    setCurrentTrackIndex(0)
+    setCurrentTrack(nextQueue[0] || null)
+
+    if (isPlaying && nextQueueUris.length > 0) {
+      await play(nextQueueUris[0], null, 0, nextQueueUris, currentProgress)
+    }
+  }, [
+    effectiveShuffleEnabled,
+    toggleShuffle,
+    currentPlaybackSource,
+    currentSourceTracks,
+    currentTrack,
+    createLikedSongsQueue,
+    isPlaying,
+    play,
+    currentProgress
+  ])
 
   return (
     <div className={`app theme-${theme} skin-${skin}`}>
@@ -429,10 +632,10 @@ function App() {
         currentProgress={currentProgress}
         duration={duration}
         volume={volume}
-        shuffleEnabled={shuffleEnabled}
+        shuffleEnabled={effectiveShuffleEnabled}
         repeatMode={repeatMode}
         onSeek={handleSeek}
-        onToggleShuffle={toggleShuffle}
+        onToggleShuffle={handleToggleShuffle}
         onCycleRepeatMode={cycleRepeatMode}
         onVolumeChange={handleVolumeChange}
         playbackError={playbackError}

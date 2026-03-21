@@ -1,20 +1,20 @@
 # PixelPod
 
-PixelPod is an iPod-inspired Spotify player built with React, Vite, and Express. It recreates the feel of navigating music on a classic click-wheel device while using Spotify for authentication, library access, search, and playback.
+PixelPod is an iPod-inspired Spotify player built with React, Vite, and Express. It recreates the feel of a classic click-wheel music player while using Spotify for authentication, library browsing, search, and playback.
 
-The app includes a custom iPod-style interface, Spotify OAuth login, playlist browsing, liked songs, track search, in-browser playback through the Spotify Web Playback SDK, and a lightweight automated test suite.
+The app now includes a polished iPod-style shell, playlist and liked-song browsing, categorized search, a refined Now Playing screen, theme and skin switching, stronger error handling, a cleaner service-driven architecture, and automated tests.
 
-## Features
+## Highlights
 
-- iPod-inspired UI with a custom screen and click wheel
-- Spotify login flow with PKCE-based authentication
-- Browse your Spotify playlists
-- Open and play tracks from playlists
-- View and play your liked songs
-- Search Spotify tracks from the app
-- Now Playing screen with album art and playback progress
-- Keyboard support for navigating the click-wheel interface
-- Phase-tested service and UI coverage with Vitest + Testing Library
+- Classic iPod-style interface with a custom screen and click wheel
+- Spotify OAuth login with PKCE
+- Browse playlists and liked songs
+- Search tracks, albums, and artists
+- Playback controls with progress, seek, shuffle, repeat, and volume
+- Theme and skin switching from Settings
+- Keyboard navigation support alongside click-wheel controls
+- Production-ready Express auth server with health check and optional static frontend serving
+- Automated unit and integration tests with Vitest and Testing Library
 
 ## Tech Stack
 
@@ -23,20 +23,25 @@ The app includes a custom iPod-style interface, Spotify OAuth login, playlist br
 - Express
 - Spotify Web API
 - Spotify Web Playback SDK
+- Vitest
+- Testing Library
 
 ## Project Structure
 
 ```text
 .
-|-- server/              # Express auth server for Spotify OAuth
+|-- server/                 # Express auth server and production entrypoint
 |-- src/
-|   |-- components/      # iPod shell, screen, and click wheel
-|   |-- context/         # Auth, Spotify data, and playback state
-|   |-- screens/         # Boot, login, menu, search, now playing views
-|   `-- utils/           # Spotify auth and API helpers
+|   |-- components/         # iPod shell, screen, click wheel
+|   |-- context/            # Auth, Spotify data, playback providers
+|   |-- hooks/              # Reusable app hooks
+|   |-- screens/            # Boot, login, menu, search, settings, now playing
+|   |-- services/           # Auth, Spotify, playback service layer
+|   |-- test/               # Shared test setup
+|   `-- utils/              # Spotify helpers, sound helpers, logger
 |-- .env.example
-|-- package.json
 |-- SETUP.md
+|-- package.json
 `-- vite.config.js
 ```
 
@@ -47,7 +52,7 @@ The app includes a custom iPod-style interface, Spotify OAuth login, playlist br
 - A Spotify Developer app
 - A Spotify Premium account for full playback support
 
-## Getting Started
+## Quick Start
 
 1. Install dependencies:
 
@@ -61,13 +66,13 @@ npm install
 cp .env.example .env
 ```
 
-On Windows PowerShell, you can use:
+PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-3. Fill in your Spotify app credentials in `.env`:
+3. Fill in your Spotify app credentials:
 
 ```env
 SPOTIFY_CLIENT_ID=your_client_id_here
@@ -76,81 +81,125 @@ REDIRECT_URI=http://127.0.0.1:5174/callback
 PORT=3001
 ```
 
-Optional frontend overrides:
-
-```env
-# Leave empty to use the same origin.
-# In local development, the Vite proxy forwards /api to VITE_API_PROXY_TARGET.
-VITE_API_BASE_URL=
-VITE_API_PROXY_TARGET=http://127.0.0.1:3001
-
-# Optional production-friendly token storage mode
-# Defaults to local in development and session in production
-VITE_TOKEN_STORAGE=session
-```
-
-4. Start the frontend and backend together:
+4. Start the app in development:
 
 ```bash
 npm run dev:full
 ```
 
-5. Open the app at:
+5. Open:
 
 ```text
 http://127.0.0.1:5174
 ```
 
-## Spotify App Setup
+## Environment Variables
 
-Create a Spotify app in the Spotify Developer Dashboard and configure it with:
+Required server variables:
 
-- Redirect URI: `http://127.0.0.1:5174/callback`
-- Required use case: Spotify Web API
-- Playback note: browser playback relies on the Spotify Web Playback SDK
+```env
+SPOTIFY_CLIENT_ID=your_client_id_here
+SPOTIFY_CLIENT_SECRET=your_client_secret_here
+REDIRECT_URI=http://127.0.0.1:5174/callback
+PORT=3001
+```
 
-After creating the app, copy the Client ID and Client Secret into your local `.env` file.
+Optional variables:
+
+```env
+# Restrict the auth server to a known frontend origin
+FRONTEND_ORIGIN=http://127.0.0.1:5174
+
+# Optional comma-separated extra origins
+CORS_ORIGIN=
+
+# Leave empty for same-origin requests.
+# In local dev, Vite proxies /api to VITE_API_PROXY_TARGET.
+VITE_API_BASE_URL=
+VITE_API_PROXY_TARGET=http://127.0.0.1:3001
+
+# Defaults to local in development and session in production
+VITE_TOKEN_STORAGE=session
+```
 
 ## Available Scripts
 
 - `npm run dev` starts the Vite frontend on `127.0.0.1:5174`
 - `npm run server` starts the Express auth server on port `3001`
-- `npm start` starts the Express auth server for production or static hosting
-- `npm run dev:full` runs both frontend and backend together
-- `npm run build` creates a production frontend build
-- `npm run preview` previews the Vite production build
-- `npm run test` starts the Vitest watcher
+- `npm run dev:full` runs frontend and backend together
+- `npm run build` builds the frontend into `dist/`
+- `npm run preview` previews the production frontend build
+- `npm start` starts the Express server and can serve `dist/`
+- `npm run test` starts Vitest in watch mode
 - `npm run test:run` runs the test suite once
 
-When running only the frontend dev server, `/api/*` requests are proxied to `http://127.0.0.1:3001` by Vite.
+## Spotify App Setup
 
-## Production Notes
+Create a Spotify app in the Spotify Developer Dashboard and configure:
 
-- In production, the Express server can serve the built frontend from `dist/`.
-- `/api/health` returns a simple readiness payload for uptime checks.
-- Token storage defaults to `sessionStorage` in production to avoid keeping Spotify credentials around after the browser session ends.
-- You can restrict CORS with `FRONTEND_ORIGIN` and optional extra origins via `CORS_ORIGIN`.
+- Redirect URI: `http://127.0.0.1:5174/callback`
+- Use case: Spotify Web API
+- Playback note: browser playback uses the Spotify Web Playback SDK
+
+After creating the app, copy the Client ID and Client Secret into `.env`.
 
 ## Controls
 
-PixelPod supports both the on-screen click wheel and keyboard input.
+PixelPod supports both keyboard input and the on-screen wheel.
 
-- `ArrowUp` / `ArrowDown`: move through menus and search results
+- `ArrowUp` / `ArrowDown`: move through menus and results
 - `Enter`: select
 - `Escape`: go back
-- `Space`: play or pause on the Now Playing screen
+- `Space`: play or pause on Now Playing
+- `ArrowLeft` / `ArrowRight`: skip back or forward
+- `S`: toggle shuffle
+- `R`: cycle repeat mode
+- `+` / `-`: raise or lower volume
+- `M`: mute or restore volume
 - Mouse drag on the wheel: simulate click-wheel scrolling
-- Wheel buttons: `MENU`, `SELECT`, previous, next, play/pause
+
+## Testing
+
+The test suite covers both logic and user flow.
+
+- Auth service behavior
+- Playback service requests
+- Spotify service pagination and mapping
+- Utility formatter output
+- App-level navigation into Settings and Now Playing
+
+Run tests with:
+
+```bash
+npm run test:run
+```
+
+## Production Notes
+
+- The Express server exposes `/api/health` for readiness checks.
+- If `dist/` exists, the server can also serve the built frontend.
+- Browser token storage defaults to `sessionStorage` in production to reduce token persistence.
+- CORS can be restricted with `FRONTEND_ORIGIN` and `CORS_ORIGIN`.
+
+Production flow:
+
+```bash
+npm run build
+npm start
+```
 
 ## How It Works
 
-- The Express server handles Spotify OAuth token exchange and refresh.
-- The React app stores tokens in browser storage after login, with session-scoped storage preferred in production.
-- Spotify data such as playlists, liked songs, and search results is fetched from the Spotify Web API.
-- Playback is handled in the browser using the Spotify Web Playback SDK and an active Spotify device session.
+- The Express server handles Spotify OAuth code exchange and refresh.
+- The React app stores Spotify tokens in browser storage and restores sessions on load.
+- Spotify data is fetched through a service layer and exposed via React context.
+- Playback is controlled in-browser through the Spotify Web Playback SDK.
+- The iPod shell and screen system manage navigation, transitions, and click-wheel interactions.
 
-## Notes and Limitations
+## Notes
 
 - Full playback requires Spotify Premium.
-- The backend server must be running for login and token refresh to work unless you are serving the built app through `npm start`.
-- `.env`, `node_modules`, and build output are ignored by Git and should not be committed.
+- The auth server must be running for login and token refresh unless you are serving the built app through `npm start`.
+- `.env`, `node_modules`, and build output should not be committed.
+
+More detailed setup and deployment notes are in [SETUP.md]

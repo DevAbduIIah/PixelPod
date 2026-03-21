@@ -177,6 +177,7 @@ app.get('/api/auth/login', (_req, res) => {
     redirect_uri: REDIRECT_URI,
     state,
     scope,
+    show_dialog: 'true',
     code_challenge_method: 'S256',
     code_challenge: codeChallenge
   })

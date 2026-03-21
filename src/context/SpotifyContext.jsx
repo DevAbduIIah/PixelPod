@@ -54,7 +54,20 @@ export function SpotifyProvider({ children }) {
       logger.error('Error fetching playlist tracks:', err)
 
       // Handle specific playlist access errors
-      if (err.message.includes('Access denied')) {
+      const normalizedMessage = err.message.toLowerCase()
+
+      if (
+        normalizedMessage.includes('connect spotify again') ||
+        normalizedMessage.includes('permissions changed') ||
+        normalizedMessage.includes('session expired') ||
+        normalizedMessage.includes('not authenticated')
+      ) {
+        setError(err.message)
+      } else if (
+        normalizedMessage.includes('private') ||
+        normalizedMessage.includes('deleted') ||
+        normalizedMessage.includes('not found')
+      ) {
         setError('Cannot access this playlist - it may be private or deleted')
       } else {
         setError(err.message)

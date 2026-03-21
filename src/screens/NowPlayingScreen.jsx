@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState, useEffect } from 'react'
 import './NowPlayingScreen.css'
 
 function NowPlayingScreen({
@@ -20,6 +20,67 @@ function NowPlayingScreen({
   playbackReady
 }) {
   const progressBarRef = useRef(null)
+  const [displayedArt, setDisplayedArt] = useState(track?.albumArt || null)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [visualizerBars, setVisualizerBars] = useState(Array.from({ length: 12 }, () => 0.2))
+
+  useEffect(() => {
+    if (!track?.albumArt) {
+      setDisplayedArt(null)
+      setIsTransitioning(false)
+      return
+    }
+
+    if (!displayedArt) {
+      setDisplayedArt(track.albumArt)
+      return
+    }
+
+    if (track.albumArt !== displayedArt) {
+      setIsTransitioning(true)
+
+      const swapTimer = setTimeout(() => {
+        setDisplayedArt(track.albumArt)
+      }, 120)
+
+      const settleTimer = setTimeout(() => {
+        setIsTransitioning(false)
+      }, 260)
+
+      return () => {
+        clearTimeout(swapTimer)
+        clearTimeout(settleTimer)
+      }
+    }
+  }, [track?.albumArt, displayedArt])
+
+  useEffect(() => {
+    if (!track) {
+      setVisualizerBars(Array.from({ length: 12 }, () => 0.16))
+      return
+    }
+
+    if (!isPlaying) {
+      setVisualizerBars(Array.from({ length: 12 }, (_, index) => 0.18 + (index % 3) * 0.06))
+      return
+    }
+
+    const updateVisualizer = () => {
+      const seed = Math.floor((currentProgress || Date.now()) / 180)
+      setVisualizerBars(
+        Array.from({ length: 12 }, (_, index) => {
+          const wave = Math.sin((seed + index * 3) / 2.6)
+          const pulse = Math.cos((seed + index * 5) / 3.1)
+          const value = 0.22 + ((wave + 1) * 0.22) + ((pulse + 1) * 0.12)
+          return Math.min(0.96, Math.max(0.16, value))
+        })
+      )
+    }
+
+    updateVisualizer()
+    const timer = setInterval(updateVisualizer, 180)
+    return () => clearInterval(timer)
+  }, [track, isPlaying, currentProgress])
 
   const formatTime = (ms) => {
     if (!ms || ms < 0) return '0:00'
@@ -29,28 +90,28 @@ function NowPlayingScreen({
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleProgressClick = useCallback((e) => {
+  const handleProgressClick = useCallback((event) => {
     if (!progressBarRef.current || !duration || !onSeek) return
 
     const rect = progressBarRef.current.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
+    const clickX = event.clientX - rect.left
     const percentage = Math.max(0, Math.min(1, clickX / rect.width))
     const seekPosition = Math.floor(percentage * duration)
     onSeek(seekPosition)
   }, [duration, onSeek])
 
-  const getRepeatIcon = () => {
+  const getRepeatStateLabel = () => {
     switch (repeatMode) {
       case 'track':
-        return '🔂'
+        return 'ONE'
       case 'context':
-        return '🔁'
+        return 'ALL'
       default:
-        return '➡️'
+        return 'OFF'
     }
   }
 
-  const getRepeatLabel = () => {
+  const getReadableRepeatLabel = () => {
     switch (repeatMode) {
       case 'track':
         return 'One'
@@ -69,28 +130,55 @@ function NowPlayingScreen({
     return 'Playback Error'
   }
 
+  const getStatusTone = () => {
+    if (playbackError) return 'error'
+    if (!playbackReady) return 'waiting'
+    if (isLoading) return 'loading'
+    if (isPlaying) return 'active'
+    return 'idle'
+  }
+
+  const getStatusLabel = () => {
+    if (playbackError) return getErrorMessage(playbackError)
+    if (!playbackReady) return 'Connecting'
+    if (isLoading) return 'Buffering'
+    if (isPlaying) return 'Playing'
+    return 'Paused'
+  }
+
+  const getStatusCode = () => {
+    if (playbackError) return 'ERR'
+    if (!playbackReady) return 'SYNC'
+    if (isLoading) return 'LOAD'
+    if (isPlaying) return 'PLAY'
+    return 'PAUSE'
+  }
+
   if (!track) {
     return (
       <div className="now-playing-screen">
-        <div className="now-playing-header">Now Playing</div>
-        <div className="no-track">
+        <div className="now-playing-header">
+          <span>Now Playing</span>
+          <span className={`status-pill ${getStatusTone()}`}>{getStatusCode()}</span>
+        </div>
+
+        <div className="empty-player">
+          <div className={`empty-emblem ${getStatusTone()}`}>{getStatusCode()}</div>
+
           {!playbackReady ? (
             <>
-              <div className="no-track-icon connecting">🎵</div>
-              <div className="no-track-text">Connecting to Spotify...</div>
-              <div className="no-track-hint">Please wait</div>
+              <div className="empty-title">Connecting to Spotify</div>
+              <div className="empty-copy">Please wait while playback controls come online.</div>
             </>
           ) : playbackError ? (
             <>
-              <div className="no-track-icon error">⚠️</div>
-              <div className="no-track-text">{getErrorMessage(playbackError)}</div>
-              <div className="no-track-hint">{playbackError}</div>
+              <div className="empty-title">{getErrorMessage(playbackError)}</div>
+              <div className="empty-copy">{playbackError}</div>
             </>
           ) : (
             <>
-              <div className="no-track-icon">♫</div>
-              <div className="no-track-text">No track selected</div>
-              <div className="no-track-hint">Select a song to play</div>
+              <div className="empty-title">No Track Selected</div>
+              <div className="empty-copy">Choose a song from your library to start playback.</div>
             </>
           )}
         </div>
@@ -100,37 +188,49 @@ function NowPlayingScreen({
 
   return (
     <div className="now-playing-screen">
-      <div className="now-playing-header">Now Playing</div>
+      <div className="now-playing-header">
+        <span>Now Playing</span>
+        <span className={`status-pill ${getStatusTone()}`}>{getStatusLabel()}</span>
+      </div>
 
-      {playbackError && (
-        <div className="error-banner">
-          {getErrorMessage(playbackError)}
+      <div className="album-showcase">
+        <div className={`album-art ${isTransitioning ? 'transitioning' : ''}`}>
+          {displayedArt ? (
+            <img
+              src={displayedArt}
+              alt={track.album}
+              className={`album-art-image ${isPlaying ? 'playing' : ''}`}
+            />
+          ) : (
+            <div className="album-art-placeholder">PP</div>
+          )}
+
+          {isLoading && (
+            <div className="loading-overlay">
+              <div className="loading-spinner"></div>
+            </div>
+          )}
         </div>
-      )}
 
-      <div className="album-art">
-        {track.albumArt ? (
-          <img
-            src={track.albumArt}
-            alt={track.album}
-            className="album-art-image"
-          />
-        ) : (
-          <div className="album-art-placeholder">♫</div>
-        )}
-        {isLoading && (
-          <div className="loading-overlay">
-            <div className="loading-spinner"></div>
+        <div className="track-info">
+          <div className="track-title" title={track.title}>{track.title}</div>
+          <div className="track-artist" title={track.artist}>{track.artist}</div>
+          <div className="track-album" title={track.album}>{track.album}</div>
+
+          <div className="track-status-row">
+            <span className="track-status-label">{isPlaying ? 'Active Session' : 'Ready To Resume'}</span>
+            <span className="track-status-divider" aria-hidden="true" />
+            <span className="track-status-label">{shuffleEnabled ? 'Shuffle On' : 'Linear Queue'}</span>
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="track-info">
-        <div className="track-title">{track.title}</div>
-        <div className="track-artist">{track.artist}</div>
-      </div>
+      <div className="progress-panel">
+        <div className="panel-heading">
+          <span>Progress</span>
+          <span>{formatTime(currentProgress)} / {formatTime(duration)}</span>
+        </div>
 
-      <div className="progress-section">
         <div
           className="progress-bar"
           ref={progressBarRef}
@@ -145,20 +245,17 @@ function NowPlayingScreen({
           <div className="progress-fill" style={{ width: `${progress}%` }}></div>
           <div className="progress-handle" style={{ left: `${progress}%` }}></div>
         </div>
-        <div className="time-display">
-          <span>{formatTime(currentProgress)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
       </div>
 
-      <div className="playback-controls">
+      <div className="playback-controls" role="group" aria-label="Playback controls">
         <button
-          className={`control-btn shuffle-btn ${shuffleEnabled ? 'active' : ''}`}
+          className={`mode-control ${shuffleEnabled ? 'active' : ''}`}
           onClick={onToggleShuffle}
           aria-label={shuffleEnabled ? 'Shuffle on' : 'Shuffle off'}
           title={shuffleEnabled ? 'Shuffle: On' : 'Shuffle: Off'}
         >
-          🔀
+          <span className="mode-control-label">Shuffle</span>
+          <span className="mode-control-value">{shuffleEnabled ? 'On' : 'Off'}</span>
         </button>
 
         <button
@@ -167,41 +264,62 @@ function NowPlayingScreen({
           aria-label={isPlaying ? 'Pause' : 'Play'}
           title={isPlaying ? 'Pause' : 'Play'}
         >
-          {isLoading ? (
-            <span className="loading-icon">⏳</span>
-          ) : isPlaying ? (
-            '⏸'
-          ) : (
-            '▶'
-          )}
+          <span className={`play-btn-text ${isLoading ? 'loading' : ''}`}>
+            {isLoading ? 'Wait' : isPlaying ? 'Pause' : 'Play'}
+          </span>
         </button>
 
         <button
-          className={`control-btn repeat-btn ${repeatMode !== 'off' ? 'active' : ''}`}
+          className={`mode-control ${repeatMode !== 'off' ? 'active' : ''}`}
           onClick={onCycleRepeatMode}
-          aria-label={`Repeat: ${getRepeatLabel()}`}
-          title={`Repeat: ${getRepeatLabel()}`}
+          aria-label={`Repeat: ${getReadableRepeatLabel()}`}
+          title={`Repeat: ${getReadableRepeatLabel()}`}
         >
-          {getRepeatIcon()}
+          <span className="mode-control-label">Repeat</span>
+          <span className="mode-control-value">{getRepeatStateLabel()}</span>
         </button>
       </div>
 
-      <div className="volume-section">
-        <span className="volume-icon">🔈</span>
+      <div className="visualizer-panel">
+        <div className="panel-heading">
+          <span>Visualizer</span>
+          <span>{isPlaying ? 'Live' : 'Idle'}</span>
+        </div>
+
+        <div className={`visualizer-display ${isPlaying ? 'active' : ''}`}>
+          {visualizerBars.map((barHeight, index) => (
+            <span
+              key={index}
+              className="visualizer-bar"
+              style={{ '--visualizer-height': `${Math.round(barHeight * 100)}%` }}
+            ></span>
+          ))}
+        </div>
+      </div>
+
+      <div className="volume-panel">
+        <div className="panel-heading">
+          <span>Volume</span>
+          <span>{volume}%</span>
+        </div>
+
         <div className="volume-bar">
           <input
             type="range"
             min="0"
             max="100"
             value={volume}
-            onChange={(e) => onVolumeChange(Number(e.target.value))}
+            onChange={(event) => onVolumeChange(Number(event.target.value))}
             className="volume-slider"
             aria-label="Volume"
           />
           <div className="volume-fill" style={{ width: `${volume}%` }}></div>
         </div>
-        <span className="volume-icon">🔊</span>
       </div>
+
+      {playbackError && (
+        <div className="status-note error">{playbackError}</div>
+      )}
     </div>
   )
 }

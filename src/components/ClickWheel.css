@@ -10,14 +10,14 @@
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  background: linear-gradient(145deg, #f0f0f0, #c8c8c8);
+  background: var(--wheel-bg);
   box-shadow:
     0 8px 20px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
   position: relative;
   cursor: pointer;
-  border: 3px solid rgba(255, 255, 255, 0.5);
+  border: 3px solid var(--wheel-border);
   user-select: none;
   transition: transform 0.1s ease;
 }
@@ -34,7 +34,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(145deg, #ffffff, #d8d8d8);
+  background: var(--wheel-inner-bg);
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -50,7 +50,7 @@
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--wheel-text);
   font-size: 7px;
   font-family: "Press Start 2P", monospace;
   cursor: pointer;
@@ -70,7 +70,7 @@
   position: absolute;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: var(--wheel-text);
   font-size: 12px;
   font-family: "Press Start 2P", monospace;
   cursor: pointer;

@@ -20,41 +20,38 @@ function SearchScreen({
   const inputRef = useRef(null)
   const selectedResultRef = useRef(null)
 
-  // Debounce search query
   const debouncedQuery = useDebounce(query, 400)
 
-  // Load recent searches from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem(RECENT_SEARCHES_KEY)
       if (stored) {
         setRecentSearches(JSON.parse(stored))
       }
-    } catch (e) {
-      console.error('Error loading recent searches:', e)
+    } catch (error) {
+      console.error('Error loading recent searches:', error)
     }
   }, [])
 
-  // Save recent search
   const saveRecentSearch = useCallback((searchQuery) => {
     if (!searchQuery.trim()) return
 
-    setRecentSearches(prev => {
-      const filtered = prev.filter(s => s.toLowerCase() !== searchQuery.toLowerCase())
+    setRecentSearches((previousSearches) => {
+      const filtered = previousSearches.filter((savedQuery) => (
+        savedQuery.toLowerCase() !== searchQuery.toLowerCase()
+      ))
       const updated = [searchQuery, ...filtered].slice(0, MAX_RECENT_SEARCHES)
       localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated))
       return updated
     })
   }, [])
 
-  // Focus input when component mounts
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus()
     }
   }, [])
 
-  // Scroll selected result into view
   useEffect(() => {
     if (selectedResultRef.current && mode === 'results') {
       selectedResultRef.current.scrollIntoView({
@@ -64,7 +61,6 @@ function SearchScreen({
     }
   }, [selectedIndex, mode])
 
-  // Trigger search when debounced query changes
   useEffect(() => {
     if (debouncedQuery.length >= 2 && onSearch) {
       onSearch(debouncedQuery)
@@ -72,46 +68,46 @@ function SearchScreen({
     }
   }, [debouncedQuery, onSearch, saveRecentSearch])
 
-  // Handle input change
-  const handleInputChange = (e) => {
-    setQuery(e.target.value)
+  const handleInputChange = (event) => {
+    setQuery(event.target.value)
   }
 
-  // Get results for current category
   const getCurrentResults = useCallback(() => {
     if (!searchResults) return []
 
-    // Handle both old (array) and new (object) format
     if (Array.isArray(searchResults)) {
       return activeCategory === 0 ? searchResults : []
     }
 
     switch (activeCategory) {
-      case 0: return searchResults.tracks || []
-      case 1: return searchResults.albums || []
-      case 2: return searchResults.artists || []
-      default: return []
+      case 0:
+        return searchResults.tracks || []
+      case 1:
+        return searchResults.albums || []
+      case 2:
+        return searchResults.artists || []
+      default:
+        return []
     }
   }, [searchResults, activeCategory])
 
-  // Handle keyboard input
-  const handleInputKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
+  const handleInputKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
       const results = getCurrentResults()
+
       if (mode === 'results' && results.length > 0 && onSelect) {
         onSelect()
       } else if (query.trim() && onSearch) {
         onSearch(query.trim())
         saveRecentSearch(query.trim())
       }
-    } else if (e.key === 'Tab') {
-      e.preventDefault()
-      setActiveCategory(prev => (prev + 1) % CATEGORIES.length)
+    } else if (event.key === 'Tab') {
+      event.preventDefault()
+      setActiveCategory((previousCategory) => (previousCategory + 1) % CATEGORIES.length)
     }
   }
 
-  // Handle recent search click
   const handleRecentSearch = (searchQuery) => {
     setQuery(searchQuery)
     if (onSearch) {
@@ -119,48 +115,48 @@ function SearchScreen({
     }
   }
 
-  // Clear recent searches
   const clearRecentSearches = () => {
     setRecentSearches([])
     localStorage.removeItem(RECENT_SEARCHES_KEY)
   }
 
-  // Get total results count
   const getTotalCount = () => {
     if (!searchResults) return 0
     if (Array.isArray(searchResults)) return searchResults.length
 
     return (searchResults.tracks?.length || 0) +
-           (searchResults.albums?.length || 0) +
-           (searchResults.artists?.length || 0)
+      (searchResults.albums?.length || 0) +
+      (searchResults.artists?.length || 0)
   }
 
   const currentResults = getCurrentResults()
   const hasResults = currentResults.length > 0
-  const hasAnyResults = getTotalCount() > 0
+  const totalCount = getTotalCount()
+  const hasAnyResults = totalCount > 0
 
-  // Show results view if in results mode
   if (mode === 'results' && hasResults) {
     return (
       <div className="search-screen">
         <div className="search-header">
-          <span>Results ({currentResults.length})</span>
+          <span>Search</span>
+          <span className="search-header-meta">{CATEGORIES[activeCategory]} {currentResults.length}</span>
         </div>
 
         <div className="category-tabs">
-          {CATEGORIES.map((cat, index) => {
+          {CATEGORIES.map((category, index) => {
             const count = Array.isArray(searchResults)
               ? (index === 0 ? searchResults.length : 0)
               : (index === 0 ? searchResults.tracks?.length :
                  index === 1 ? searchResults.albums?.length :
                  searchResults.artists?.length) || 0
+
             return (
               <button
-                key={cat}
+                key={category}
                 className={`category-tab ${activeCategory === index ? 'active' : ''}`}
                 onClick={() => setActiveCategory(index)}
               >
-                {cat} ({count})
+                {category} ({count})
               </button>
             )
           })}
@@ -182,7 +178,7 @@ function SearchScreen({
               {activeCategory === 1 && (
                 <>
                   <div className="result-title">{item.title}</div>
-                  <div className="result-artist">{item.artist} • {item.totalTracks} tracks</div>
+                  <div className="result-artist">{item.artist} - {item.totalTracks} tracks</div>
                 </>
               )}
               {activeCategory === 2 && (
@@ -198,10 +194,12 @@ function SearchScreen({
     )
   }
 
-  // Main input view
   return (
     <div className="search-screen">
-      <div className="search-header">Search</div>
+      <div className="search-header">
+        <span>Search</span>
+        <span className="search-header-meta">{query ? `${totalCount} results` : 'Spotify Library'}</span>
+      </div>
 
       <div className="search-input-container">
         <input
@@ -211,35 +209,36 @@ function SearchScreen({
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}
-          placeholder="Type to search..."
+          placeholder="Search songs, albums, artists"
           autoFocus
         />
         {query && (
-          <button className="clear-btn" onClick={() => setQuery('')}>×</button>
+          <button className="clear-btn" onClick={() => setQuery('')}>
+            Clear
+          </button>
         )}
       </div>
 
-      {/* Category tabs */}
       <div className="category-tabs">
-        {CATEGORIES.map((cat, index) => {
+        {CATEGORIES.map((category, index) => {
           const count = Array.isArray(searchResults)
             ? (index === 0 ? searchResults.length : 0)
             : (index === 0 ? searchResults?.tracks?.length :
                index === 1 ? searchResults?.albums?.length :
                searchResults?.artists?.length) || 0
+
           return (
             <button
-              key={cat}
+              key={category}
               className={`category-tab ${activeCategory === index ? 'active' : ''}`}
               onClick={() => setActiveCategory(index)}
             >
-              {cat} {count > 0 && `(${count})`}
+              {category} {count > 0 && `(${count})`}
             </button>
           )
         })}
       </div>
 
-      {/* Loading skeletons */}
       {isLoading && (
         <div className="loading-container">
           <div className="skeleton-item">
@@ -257,26 +256,24 @@ function SearchScreen({
         </div>
       )}
 
-      {/* Empty state */}
       {!isLoading && query.length >= 2 && !hasAnyResults && (
         <div className="empty-state">
-          <div className="empty-icon">🔍</div>
-          <div className="empty-title">No results found</div>
-          <div className="empty-subtitle">Try different keywords</div>
+          <div className="empty-icon">SCAN</div>
+          <div className="empty-title">No Results Found</div>
+          <div className="empty-subtitle">Try a different artist, album, or track name.</div>
         </div>
       )}
 
-      {/* Hint for short query */}
       {!isLoading && query.length > 0 && query.length < 2 && (
-        <div className="search-hint">Type at least 2 characters</div>
+        <div className="search-hint">Type at least 2 characters to begin.</div>
       )}
 
-      {/* Inline results */}
       {!isLoading && hasResults && (
         <div className="inline-results">
           <div className="inline-results-header">
-            Found {currentResults.length} {CATEGORIES[activeCategory].toLowerCase()} - Use ↑↓ to navigate
+            Top {Math.min(currentResults.length, 10)} {CATEGORIES[activeCategory].toLowerCase()} shown. Use Up and Down to move.
           </div>
+
           <div className="inline-results-list">
             {currentResults.slice(0, 10).map((item, index) => (
               <div
@@ -307,13 +304,13 @@ function SearchScreen({
         </div>
       )}
 
-      {/* Recent searches */}
       {!isLoading && !hasAnyResults && query.length === 0 && recentSearches.length > 0 && (
         <div className="recent-searches">
           <div className="recent-header">
             <span>Recent Searches</span>
             <button className="clear-recent" onClick={clearRecentSearches}>Clear</button>
           </div>
+
           <div className="recent-list">
             {recentSearches.map((recent, index) => (
               <button
@@ -321,7 +318,7 @@ function SearchScreen({
                 className="recent-item"
                 onClick={() => handleRecentSearch(recent)}
               >
-                <span className="recent-icon">🕐</span>
+                <span className="recent-badge">{String(index + 1).padStart(2, '0')}</span>
                 <span className="recent-text">{recent}</span>
               </button>
             ))}
@@ -329,11 +326,16 @@ function SearchScreen({
         </div>
       )}
 
-      {/* Search tips when empty */}
       {!isLoading && !hasAnyResults && query.length === 0 && recentSearches.length === 0 && (
         <div className="search-tips">
-          <div className="tip-item">💡 Search for songs, albums, or artists</div>
-          <div className="tip-item">🎵 Use Tab to switch categories</div>
+          <div className="tip-item">
+            <span className="tip-title">Search the catalog</span>
+            <span className="tip-copy">Look up songs, albums, and artists from one screen.</span>
+          </div>
+          <div className="tip-item">
+            <span className="tip-title">Switch categories</span>
+            <span className="tip-copy">Press Tab to cycle between Tracks, Albums, and Artists.</span>
+          </div>
         </div>
       )}
     </div>

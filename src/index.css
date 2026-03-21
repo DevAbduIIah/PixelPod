@@ -8,9 +8,41 @@
   --screen-bg: #b8c6db;
   --screen-dark: #1c3a52;
   --screen-light: #e8f0f8;
-  --accent: #4a90e2;
-  --text-primary: #1a1a1a;
-  --text-secondary: #5a5a5a;
+  --accent: #527aa0;
+  --accent-rgb: 82, 122, 160;
+  --text-primary: #183246;
+  --text-secondary: #556a7c;
+  --screen-font: "Trebuchet MS", "Verdana", sans-serif;
+  --screen-space-1: 4px;
+  --screen-space-2: 8px;
+  --screen-space-3: 12px;
+  --screen-space-4: 16px;
+  --screen-space-5: 20px;
+  --screen-radius-sm: 6px;
+  --screen-radius-md: 10px;
+  --screen-radius-lg: 14px;
+  --screen-rule: rgba(28, 58, 82, 0.2);
+  --screen-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(223, 232, 240, 0.62));
+  --screen-panel-border: rgba(51, 78, 102, 0.2);
+  --screen-panel-shadow: 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 10px rgba(34, 56, 74, 0.08);
+  --screen-selected-bg: linear-gradient(180deg, rgba(94, 129, 161, 0.24), rgba(69, 101, 131, 0.18));
+  --screen-selected-border: rgba(55, 82, 104, 0.38);
+  --screen-soft-fill: rgba(255, 255, 255, 0.42);
+  --screen-soft-fill-strong: rgba(255, 255, 255, 0.58);
+  --screen-error: #8e4343;
+  --screen-error-bg: rgba(168, 80, 80, 0.12);
+  --screen-success: #46665c;
+  --screen-motion-fast: 120ms;
+  --screen-motion-medium: 180ms;
+  --screen-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --shell-bg: linear-gradient(180deg, #fbfbfc 0%, #eceef1 38%, #d9dde1 100%);
+  --shell-border: rgba(168, 176, 186, 0.9);
+  --shell-shadow-strong: rgba(39, 47, 56, 0.28);
+  --shell-shadow-soft: rgba(19, 28, 36, 0.18);
+  --wheel-bg: linear-gradient(145deg, #f0f0f0, #c8c8c8);
+  --wheel-border: rgba(255, 255, 255, 0.5);
+  --wheel-inner-bg: linear-gradient(145deg, #ffffff, #d8d8d8);
+  --wheel-text: var(--text-secondary);
 }
 
 * {
@@ -21,23 +53,17 @@
 
 body {
   margin: 0;
-  font-family:
-    "Press Start 2P",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "Roboto",
-    monospace;
-  -webkit-font-smoothing: none;
+  font-family: var(--screen-font);
+  -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.68), transparent 32%),
+    linear-gradient(180deg, #f0ede6 0%, #d9dde3 42%, #b3bcc8 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: crisp-edges;
+  color: var(--text-primary);
 }
 
 #root {
@@ -46,5 +72,5 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 20px;
+  padding: 32px 20px;
 }

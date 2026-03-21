@@ -88,11 +88,72 @@
     background var(--screen-motion-medium) var(--screen-ease),
     opacity var(--screen-motion-medium) var(--screen-ease);
   opacity: 0.55;
+  font-size: 7px;
+  font-weight: 700;
+  color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .menu-item.selected .item-marker {
   background: rgba(var(--accent-rgb), 0.75);
   opacity: 1;
+}
+
+.status-item {
+  grid-template-columns: 34px minmax(0, 1fr);
+  min-height: 76px;
+  align-items: stretch;
+  cursor: default;
+}
+
+.status-item .item-marker {
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--accent-rgb), 0.72);
+  opacity: 1;
+  letter-spacing: 0.08em;
+}
+
+.status-item.error .item-marker {
+  background: rgba(142, 67, 67, 0.72);
+}
+
+.status-item.empty .item-marker {
+  background: rgba(64, 81, 55, 0.72);
+}
+
+.status-item.loading .item-marker {
+  animation: statusPulse 1.4s ease-in-out infinite;
+}
+
+.status-item .item-content {
+  justify-content: center;
+  gap: 5px;
+}
+
+.status-item .item-text {
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.status-item .item-subtitle {
+  white-space: normal;
+  line-height: 1.35;
+  overflow: visible;
+}
+
+@keyframes statusPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
 }
 
 .item-thumbnail {

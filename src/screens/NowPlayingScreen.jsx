@@ -125,9 +125,17 @@ function NowPlayingScreen({
   const getErrorMessage = (error) => {
     if (!error) return null
     if (error.includes('Premium')) return 'Premium Required'
-    if (error.includes('device')) return 'No Device Found'
+    if (error.includes('device')) return 'Playback Unavailable'
     if (error.includes('authentication') || error.includes('token')) return 'Login Expired'
     return 'Playback Error'
+  }
+
+  const getErrorDetail = (error) => {
+    if (!error) return ''
+    if (error.includes('Premium')) return 'A Spotify Premium account is required for device playback.'
+    if (error.includes('device')) return 'Open Spotify on a device and start playback to continue.'
+    if (error.includes('authentication') || error.includes('token')) return 'Connect Spotify again to restore playback controls.'
+    return error
   }
 
   const getStatusTone = () => {
@@ -173,7 +181,7 @@ function NowPlayingScreen({
           ) : playbackError ? (
             <>
               <div className="empty-title">{getErrorMessage(playbackError)}</div>
-              <div className="empty-copy">{playbackError}</div>
+              <div className="empty-copy">{getErrorDetail(playbackError)}</div>
             </>
           ) : (
             <>
@@ -318,7 +326,7 @@ function NowPlayingScreen({
       </div>
 
       {playbackError && (
-        <div className="status-note error">{playbackError}</div>
+        <div className="status-note error">{getErrorDetail(playbackError)}</div>
       )}
     </div>
   )

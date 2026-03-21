@@ -50,6 +50,7 @@ export function SpotifyProvider({ children }) {
       return allPlaylists
     } catch (err) {
       console.error('Error fetching playlists:', err)
+      setPlaylists([])
       setError(err.message)
       return []
     } finally {
@@ -119,6 +120,7 @@ export function SpotifyProvider({ children }) {
       return allTracks
     } catch (err) {
       console.error('Error fetching liked songs:', err)
+      setLikedSongs([])
       setError(err.message)
       return []
     } finally {
@@ -147,6 +149,7 @@ export function SpotifyProvider({ children }) {
       return results
     } catch (err) {
       console.error('Error searching:', err)
+      setSearchResults({ tracks: [], albums: [], artists: [] })
       setError(err.message)
       return { tracks: [], albums: [], artists: [] }
     } finally {
@@ -173,6 +176,7 @@ export function SpotifyProvider({ children }) {
       return tracks // Return tracks for backward compatibility
     } catch (err) {
       console.error('Error searching:', err)
+      setSearchResults({ tracks: [], albums: [], artists: [] })
       setError(err.message)
       return []
     } finally {

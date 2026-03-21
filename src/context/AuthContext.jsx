@@ -19,13 +19,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const storedTokens = getStoredTokens()
         const token = await getValidToken()
         if (token) {
           setIsAuthenticated(true)
+          setError(null)
           await fetchUserProfile(token)
+        } else if (storedTokens) {
+          setError('Login expired. Connect Spotify again.')
         }
       } catch (err) {
         console.error('Auth check failed:', err)
+        setError(err.message || 'Unable to verify Spotify login')
       } finally {
         setIsLoading(false)
       }
@@ -64,6 +69,7 @@ export function AuthProvider({ children }) {
         try {
           await exchangeCodeForToken(code, state)
           setIsAuthenticated(true)
+          setError(null)
           const token = await getValidToken()
           if (token) {
             await fetchUserProfile(token)
@@ -116,6 +122,7 @@ export function AuthProvider({ children }) {
     clearTokens()
     setIsAuthenticated(false)
     setUser(null)
+    setError(null)
   }, [])
 
   const value = {

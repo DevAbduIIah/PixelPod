@@ -194,6 +194,17 @@
   border: 1px solid rgba(var(--accent-rgb), 0.2);
 }
 
+.error-state {
+  border-color: rgba(142, 67, 67, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(234, 214, 214, 0.8));
+}
+
+.error-icon {
+  color: var(--screen-error);
+  background: rgba(142, 67, 67, 0.12);
+  border-color: rgba(142, 67, 67, 0.2);
+}
+
 .empty-title {
   font-size: 12px;
   font-weight: 700;

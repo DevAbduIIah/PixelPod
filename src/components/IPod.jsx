@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import Screen from './Screen'
 import ClickWheel from './ClickWheel'
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
 import { playClickSound, playSelectSound, playBackSound, initAudio } from '../utils/sounds'
 import './IPod.css'
 
@@ -80,97 +81,19 @@ function IPod({
     onBack()
   }
 
-  // Keyboard controls
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Don't capture horizontal arrow keys when user is typing in an input
-      // This allows cursor movement within text inputs
-      const isTyping = document.activeElement?.tagName === 'INPUT' ||
-                       document.activeElement?.tagName === 'TEXTAREA'
-
-      if (isTyping && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-        return // Let the input handle horizontal arrows
-      }
-
-      switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault()
-          handlePreviousWithSound()
-          break
-        case 'ArrowDown':
-          e.preventDefault()
-          handleNextWithSound()
-          break
-        case 'ArrowLeft':
-          e.preventDefault()
-          onSkipBack()
-          break
-        case 'ArrowRight':
-          e.preventDefault()
-          onSkipForward()
-          break
-        case 'Enter':
-          // Don't prevent default for Enter when typing - let search submit work
-          if (!isTyping) {
-            e.preventDefault()
-            handleSelectWithSound()
-          }
-          break
-        case 'Escape':
-          e.preventDefault()
-          handleBackWithSound()
-          break
-        case ' ':
-          // Don't capture space when typing
-          if (!isTyping) {
-            e.preventDefault()
-            onPlayPause()
-          }
-          break
-        case 's':
-        case 'S':
-          if (!isTyping && onToggleShuffle) {
-            e.preventDefault()
-            onToggleShuffle()
-          }
-          break
-        case 'r':
-        case 'R':
-          if (!isTyping && onCycleRepeatMode) {
-            e.preventDefault()
-            onCycleRepeatMode()
-          }
-          break
-        case '+':
-        case '=':
-          if (!isTyping && onVolumeChange && volume !== undefined) {
-            e.preventDefault()
-            onVolumeChange(Math.min(100, volume + 10))
-          }
-          break
-        case '-':
-        case '_':
-          if (!isTyping && onVolumeChange && volume !== undefined) {
-            e.preventDefault()
-            onVolumeChange(Math.max(0, volume - 10))
-          }
-          break
-        case 'm':
-        case 'M':
-          if (!isTyping && onVolumeChange && volume !== undefined) {
-            e.preventDefault()
-            // Toggle mute (save previous volume or restore)
-            onVolumeChange(volume > 0 ? 0 : 50)
-          }
-          break
-        default:
-          break
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onPrevious, onNext, onSelect, onBack, onPlayPause, onSkipForward, onSkipBack, onToggleShuffle, onCycleRepeatMode, onVolumeChange, volume])
+  useKeyboardNavigation({
+    onNext: handleNextWithSound,
+    onPrevious: handlePreviousWithSound,
+    onSelect: handleSelectWithSound,
+    onBack: handleBackWithSound,
+    onPlayPause,
+    onSkipForward,
+    onSkipBack,
+    onToggleShuffle,
+    onCycleRepeatMode,
+    onVolumeChange,
+    volume
+  })
 
   return (
     <div className={`ipod theme-${theme} skin-${skin}`}>

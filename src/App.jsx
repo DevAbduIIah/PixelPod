@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import IPod from './components/IPod'
-import { useAuth } from './context/AuthContext'
+import { useSpotifyAuth } from './hooks/useSpotifyAuth'
 import { useSpotify } from './context/SpotifyContext'
-import { usePlayback } from './context/PlaybackContext'
+import { usePlayback } from './hooks/usePlayback'
 import './App.css'
 
 const APPEARANCE_STORAGE_KEY = 'pixelpod_appearance'
 
 function App() {
-  const { isAuthenticated, isLoading: authLoading, login, logout, error: authError } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, login, logout, error: authError } = useSpotifyAuth()
   const {
     playlists,
     currentPlaylistTracks,

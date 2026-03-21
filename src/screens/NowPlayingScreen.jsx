@@ -22,7 +22,6 @@ function NowPlayingScreen({
   const progressBarRef = useRef(null)
   const [displayedArt, setDisplayedArt] = useState(track?.albumArt || null)
   const [isTransitioning, setIsTransitioning] = useState(false)
-  const [visualizerBars, setVisualizerBars] = useState(Array.from({ length: 12 }, () => 0.2))
 
   useEffect(() => {
     if (!track?.albumArt) {
@@ -53,34 +52,6 @@ function NowPlayingScreen({
       }
     }
   }, [track?.albumArt, displayedArt])
-
-  useEffect(() => {
-    if (!track) {
-      setVisualizerBars(Array.from({ length: 12 }, () => 0.16))
-      return
-    }
-
-    if (!isPlaying) {
-      setVisualizerBars(Array.from({ length: 12 }, (_, index) => 0.18 + (index % 3) * 0.06))
-      return
-    }
-
-    const updateVisualizer = () => {
-      const seed = Math.floor((currentProgress || Date.now()) / 180)
-      setVisualizerBars(
-        Array.from({ length: 12 }, (_, index) => {
-          const wave = Math.sin((seed + index * 3) / 2.6)
-          const pulse = Math.cos((seed + index * 5) / 3.1)
-          const value = 0.22 + ((wave + 1) * 0.22) + ((pulse + 1) * 0.12)
-          return Math.min(0.96, Math.max(0.16, value))
-        })
-      )
-    }
-
-    updateVisualizer()
-    const timer = setInterval(updateVisualizer, 180)
-    return () => clearInterval(timer)
-  }, [track, isPlaying, currentProgress])
 
   const formatTime = (ms) => {
     if (!ms || ms < 0) return '0:00'
@@ -286,23 +257,6 @@ function NowPlayingScreen({
           <span className="mode-control-label">Repeat</span>
           <span className="mode-control-value">{getRepeatStateLabel()}</span>
         </button>
-      </div>
-
-      <div className="visualizer-panel">
-        <div className="panel-heading">
-          <span>Visualizer</span>
-          <span>{isPlaying ? 'Live' : 'Idle'}</span>
-        </div>
-
-        <div className={`visualizer-display ${isPlaying ? 'active' : ''}`}>
-          {visualizerBars.map((barHeight, index) => (
-            <span
-              key={index}
-              className="visualizer-bar"
-              style={{ '--visualizer-height': `${Math.round(barHeight * 100)}%` }}
-            ></span>
-          ))}
-        </div>
       </div>
 
       <div className="volume-panel">

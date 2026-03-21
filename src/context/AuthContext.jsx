@@ -1,11 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import {
-  getStoredTokens,
-  getValidToken,
-  exchangeCodeForToken,
-  clearTokens,
-  initiateLogin
-} from '../utils/spotifyAuth'
+  restoreAuthSession,
+  completeAuthCallback,
+  beginSpotifyLogin,
+  clearAuthSession
+} from '../services/authService'
 
 const AuthContext = createContext(null)
 
@@ -19,15 +18,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedTokens = getStoredTokens()
-        const token = await getValidToken()
-        if (token) {
-          setIsAuthenticated(true)
-          setError(null)
-          await fetchUserProfile(token)
-        } else if (storedTokens) {
-          setError('Login expired. Connect Spotify again.')
-        }
+        const session = await restoreAuthSession()
+        setIsAuthenticated(session.isAuthenticated)
+        setUser(session.user)
+        setError(session.error)
       } catch (err) {
         console.error('Auth check failed:', err)
         setError(err.message || 'Unable to verify Spotify login')
@@ -67,13 +61,10 @@ export function AuthProvider({ children }) {
 
         setIsLoading(true)
         try {
-          await exchangeCodeForToken(code, state)
-          setIsAuthenticated(true)
-          setError(null)
-          const token = await getValidToken()
-          if (token) {
-            await fetchUserProfile(token)
-          }
+          const session = await completeAuthCallback(code, state)
+          setIsAuthenticated(session.isAuthenticated)
+          setUser(session.user)
+          setError(session.error)
         } catch (err) {
           console.error('Token exchange failed:', err)
           setError(err.message)
@@ -90,28 +81,11 @@ export function AuthProvider({ children }) {
     handleCallback()
   }, [])
 
-  const fetchUserProfile = async (token) => {
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-      }
-    } catch (err) {
-      console.error('Failed to fetch user profile:', err)
-    }
-  }
-
   const login = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      await initiateLogin()
+      await beginSpotifyLogin()
     } catch (err) {
       setError(err.message || 'Failed to initiate login')
       setIsLoading(false)
@@ -119,7 +93,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(() => {
-    clearTokens()
+    clearAuthSession()
     setIsAuthenticated(false)
     setUser(null)
     setError(null)

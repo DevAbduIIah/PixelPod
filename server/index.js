@@ -105,8 +105,19 @@ app.post('/api/auth/token', async (req, res) => {
     res.json(response.data)
   } catch (error) {
     console.error('Error exchanging code for token:', error.response?.data || error.message)
+
+    // Provide more specific error messages
+    const spotifyError = error.response?.data?.error
+    let userMessage = 'Failed to exchange authorization code'
+
+    if (spotifyError === 'invalid_grant') {
+      userMessage = 'Authorization code expired or already used. Please log in again.'
+    } else if (spotifyError === 'invalid_client') {
+      userMessage = 'Invalid Spotify app credentials. Check your .env file.'
+    }
+
     res.status(500).json({
-      error: 'Failed to exchange authorization code',
+      error: userMessage,
       details: error.response?.data || error.message
     })
   }

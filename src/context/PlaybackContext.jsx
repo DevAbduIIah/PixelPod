@@ -4,14 +4,21 @@ import { getValidToken } from '../utils/spotifyAuth'
 
 const PlaybackContext = createContext(null)
 
+// Repeat modes: 'off' | 'context' | 'track'
+const REPEAT_MODES = ['off', 'context', 'track']
+
 export function PlaybackProvider({ children }) {
   const { isAuthenticated } = useAuth()
   const [deviceId, setDeviceId] = useState(null)
   const [isReady, setIsReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [currentProgress, setCurrentProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [error, setError] = useState(null)
+  const [volume, setVolumeState] = useState(50)
+  const [shuffleEnabled, setShuffleEnabled] = useState(false)
+  const [repeatMode, setRepeatModeState] = useState('off')
   const playerRef = useRef(null)
   const initializingRef = useRef(false)
   const progressIntervalRef = useRef(null)
@@ -76,6 +83,17 @@ export function PlaybackProvider({ children }) {
           setIsPlaying(!state.paused)
           setCurrentProgress(state.position)
           setDuration(state.duration)
+          setIsLoading(false)
+
+          // Sync shuffle and repeat state from Spotify
+          if (state.shuffle !== undefined) {
+            setShuffleEnabled(state.shuffle)
+          }
+          if (state.repeat_mode !== undefined) {
+            // Spotify: 0 = off, 1 = context, 2 = track
+            const modes = ['off', 'context', 'track']
+            setRepeatModeState(modes[state.repeat_mode] || 'off')
+          }
         })
 
         // Device ready
@@ -96,6 +114,14 @@ export function PlaybackProvider({ children }) {
                 setIsPlaying(!state.paused)
                 setCurrentProgress(state.position)
                 setDuration(state.duration)
+                // Also sync shuffle and repeat state
+                if (state.shuffle !== undefined) {
+                  setShuffleEnabled(state.shuffle)
+                }
+                if (state.repeat_mode !== undefined) {
+                  const modes = ['off', 'context', 'track']
+                  setRepeatModeState(modes[state.repeat_mode] || 'off')
+                }
               }
             })
           }, 1000)
@@ -187,27 +213,45 @@ export function PlaybackProvider({ children }) {
     }
   }, [])
 
-  // Play a track
-  const play = useCallback(async (trackUri) => {
-    if (!trackUri) {
-      setError('No track URI provided')
+  // Play a track (with optional context for shuffle/repeat support)
+  const play = useCallback(async (trackUri, contextUri = null, offset = 0) => {
+    if (!trackUri && !contextUri) {
+      setError('No track or context URI provided')
       return
     }
+
+    setIsLoading(true)
 
     try {
       const token = await getValidToken()
       if (!token) {
         setError('Not authenticated')
+        setIsLoading(false)
         return
       }
 
       if (!deviceId) {
         setError('No playback device available. Please wait for Spotify to connect.')
         console.error('Cannot play - no deviceId. Player ready:', isReady, 'Player ref:', playerRef.current)
+        setIsLoading(false)
         return
       }
 
-      console.log('Playing track:', trackUri, 'on device:', deviceId)
+      let requestBody
+      if (contextUri) {
+        // Play from context (playlist/album) with offset for shuffle support
+        console.log('Playing from context:', contextUri, 'at offset:', offset)
+        requestBody = {
+          context_uri: contextUri,
+          offset: { position: offset }
+        }
+      } else {
+        // Play single track (for search results)
+        console.log('Playing single track:', trackUri, 'on device:', deviceId)
+        requestBody = {
+          uris: [trackUri]
+        }
+      }
 
       const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
         method: 'PUT',
@@ -215,9 +259,7 @@ export function PlaybackProvider({ children }) {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          uris: [trackUri]
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok && response.status !== 204) {
@@ -225,6 +267,7 @@ export function PlaybackProvider({ children }) {
         const errorMsg = errorData.error?.message || `HTTP ${response.status}`
         console.error('Play error response:', errorData)
         setError(`Failed to play track: ${errorMsg}`)
+        setIsLoading(false)
       } else {
         console.log('Track playing successfully')
         setError(null)
@@ -233,6 +276,7 @@ export function PlaybackProvider({ children }) {
     } catch (err) {
       console.error('Playback error:', err)
       setError(`Playback error: ${err.message}`)
+      setIsLoading(false)
     }
   }, [deviceId, isReady])
 
@@ -301,19 +345,150 @@ export function PlaybackProvider({ children }) {
     playerRef.current.seek(position)
   }, [])
 
+  // Toggle shuffle
+  const toggleShuffle = useCallback(async () => {
+    if (!deviceId) {
+      setError('No playback device available')
+      return
+    }
+
+    try {
+      const token = await getValidToken()
+      if (!token) {
+        setError('Not authenticated')
+        return
+      }
+
+      const newShuffleState = !shuffleEnabled
+      console.log('Toggling shuffle to:', newShuffleState, 'on device:', deviceId)
+
+      const response = await fetch(`https://api.spotify.com/v1/me/player/shuffle?state=${newShuffleState}&device_id=${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok || response.status === 204) {
+        setShuffleEnabled(newShuffleState)
+        setError(null)
+        console.log('Shuffle set to:', newShuffleState)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Shuffle error:', errorData)
+        const errorMsg = errorData.error?.message || 'Unknown error'
+        // Provide user-friendly messages
+        if (errorMsg.includes('Player command failed: No active device')) {
+          setError('Start playing a track first')
+        } else if (response.status === 403) {
+          setError('Premium account required')
+        } else {
+          setError(`Shuffle failed: ${errorMsg}`)
+        }
+      }
+    } catch (err) {
+      console.error('Shuffle error:', err)
+      setError(`Shuffle error: ${err.message}`)
+    }
+  }, [shuffleEnabled, deviceId])
+
+  // Cycle repeat mode: off -> context -> track -> off
+  const cycleRepeatMode = useCallback(async () => {
+    if (!deviceId) {
+      setError('No playback device available')
+      return
+    }
+
+    try {
+      const token = await getValidToken()
+      if (!token) {
+        setError('Not authenticated')
+        return
+      }
+
+      const currentIndex = REPEAT_MODES.indexOf(repeatMode)
+      const nextMode = REPEAT_MODES[(currentIndex + 1) % REPEAT_MODES.length]
+      console.log('Cycling repeat mode to:', nextMode)
+
+      const response = await fetch(`https://api.spotify.com/v1/me/player/repeat?state=${nextMode}&device_id=${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok || response.status === 204) {
+        setRepeatModeState(nextMode)
+        setError(null)
+        console.log('Repeat set to:', nextMode)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMsg = errorData.error?.message || 'Unknown error'
+        if (errorMsg.includes('Player command failed: No active device')) {
+          setError('Start playing a track first')
+        } else if (response.status === 403) {
+          setError('Premium account required')
+        } else {
+          setError(`Repeat failed: ${errorMsg}`)
+        }
+      }
+    } catch (err) {
+      setError(`Repeat error: ${err.message}`)
+    }
+  }, [repeatMode, deviceId])
+
+  // Set volume (0-100)
+  const setVolume = useCallback(async (volumePercent) => {
+    const clampedVolume = Math.max(0, Math.min(100, Math.round(volumePercent)))
+
+    try {
+      // Update local player volume immediately for responsiveness
+      if (playerRef.current) {
+        playerRef.current.setVolume(clampedVolume / 100)
+      }
+      setVolumeState(clampedVolume)
+
+      const token = await getValidToken()
+      if (!token) return
+
+      // Also set via API for persistence
+      await fetch(`https://api.spotify.com/v1/me/player/volume?volume_percent=${clampedVolume}&device_id=${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+    } catch (err) {
+      console.error('Volume error:', err)
+    }
+  }, [deviceId])
+
+  // Adjust volume by delta (-10 to +10 typically)
+  const adjustVolume = useCallback((delta) => {
+    setVolume(volume + delta)
+  }, [volume, setVolume])
+
   const value = {
     isReady,
     isPlaying,
+    isLoading,
     currentProgress,
     duration,
     deviceId,
     error,
+    volume,
+    shuffleEnabled,
+    repeatMode,
     play,
     pause,
     togglePlayPause,
     next,
     previous,
     seek,
+    toggleShuffle,
+    cycleRepeatMode,
+    setVolume,
+    adjustVolume,
     setError
   }
 

@@ -6,7 +6,7 @@ async function fetchWithAuth(endpoint, options = {}) {
   const token = await getValidToken()
 
   if (!token) {
-    throw new Error('Not authenticated')
+    throw new Error('Not authenticated - please log in again')
   }
 
   const response = await fetch(`${SPOTIFY_API}${endpoint}`, {
@@ -20,9 +20,21 @@ async function fetchWithAuth(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    console.log('Full Spotify error response:', JSON.stringify(error, null, 2))
-    console.log('Response status:', response.status)
-    console.log('Response URL:', response.url)
+    console.error('Spotify API error:', {
+      endpoint,
+      status: response.status,
+      statusText: response.statusText,
+      error
+    })
+
+    // Handle specific error cases
+    if (response.status === 401) {
+      throw new Error('Token expired - please log out and log back in')
+    }
+    if (response.status === 403) {
+      throw new Error('Access denied - try logging out and back in')
+    }
+
     throw new Error(error.error?.message || `API error: ${response.status}`)
   }
 
@@ -111,6 +123,7 @@ export function formatPlaylist(playlist) {
 
   return {
     id: playlist.id,
+    uri: playlist.uri, // Add URI for context playback
     name: playlist.name,
     description: playlist.description,
     trackCount: playlist.tracks?.total || 0,

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import BootScreen from '../screens/BootScreen'
 import MenuScreen from '../screens/MenuScreen'
 import NowPlayingScreen from '../screens/NowPlayingScreen'
@@ -12,16 +13,44 @@ function Screen({
   selectedIndex,
   currentTrack,
   isPlaying,
+  isLoading,
   progress,
+  currentProgress,
+  duration,
+  volume,
+  shuffleEnabled,
+  repeatMode,
+  onSeek,
+  onToggleShuffle,
+  onCycleRepeatMode,
+  onVolumeChange,
+  onPlayPause,
+  playbackError,
+  playbackReady,
   searchQuery,
   searchResults,
   onSearch,
   onSelect,
-  isLoading,
   mode,
   userProfile,
-  onLogout
+  onLogout,
+  transitionDirection
 }) {
+  const [displayScreen, setDisplayScreen] = useState(currentScreen)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+
+  // Handle screen transitions
+  useEffect(() => {
+    if (currentScreen !== displayScreen) {
+      setIsTransitioning(true)
+      const timer = setTimeout(() => {
+        setDisplayScreen(currentScreen)
+        setIsTransitioning(false)
+      }, 300) // Match CSS transition duration
+      return () => clearTimeout(timer)
+    }
+  }, [currentScreen, displayScreen])
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'boot':
@@ -58,7 +87,20 @@ function Screen({
           <NowPlayingScreen
             track={currentTrack}
             isPlaying={isPlaying}
+            isLoading={isLoading}
             progress={progress}
+            currentProgress={currentProgress}
+            duration={duration}
+            volume={volume}
+            shuffleEnabled={shuffleEnabled}
+            repeatMode={repeatMode}
+            onSeek={onSeek}
+            onToggleShuffle={onToggleShuffle}
+            onCycleRepeatMode={onCycleRepeatMode}
+            onVolumeChange={onVolumeChange}
+            onPlayPause={onPlayPause}
+            playbackError={playbackError}
+            playbackReady={playbackReady}
           />
         )
       default:
@@ -68,7 +110,11 @@ function Screen({
 
   return (
     <div className="screen">
-      <div className="screen-content">
+      <div
+        className={`screen-content ${isTransitioning ? 'transitioning' : ''} ${
+          transitionDirection === 'forward' ? 'slide-left' : 'slide-right'
+        }`}
+      >
         {renderScreen()}
       </div>
     </div>

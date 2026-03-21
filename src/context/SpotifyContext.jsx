@@ -6,7 +6,9 @@ import {
   search,
   getUserProfile,
   formatTrack,
-  formatPlaylist
+  formatPlaylist,
+  formatAlbum,
+  formatArtist
 } from '../utils/spotifyApi'
 
 const SpotifyContext = createContext(null)
@@ -15,7 +17,11 @@ export function SpotifyProvider({ children }) {
   const [playlists, setPlaylists] = useState([])
   const [currentPlaylistTracks, setCurrentPlaylistTracks] = useState([])
   const [likedSongs, setLikedSongs] = useState([])
-  const [searchResults, setSearchResults] = useState([])
+  const [searchResults, setSearchResults] = useState({
+    tracks: [],
+    albums: [],
+    artists: []
+  })
   const [selectedPlaylist, setSelectedPlaylist] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -120,26 +126,51 @@ export function SpotifyProvider({ children }) {
     }
   }, [])
 
-  // Search for tracks
-  const searchTracks = useCallback(async (query) => {
-    console.log('searchTracks called with:', query)
+  // Search for tracks, albums, and artists
+  const searchAll = useCallback(async (query) => {
     if (!query.trim()) {
-      console.log('Empty query, clearing results')
-      setSearchResults([])
+      setSearchResults({ tracks: [], albums: [], artists: [] })
+      return { tracks: [], albums: [], artists: [] }
+    }
+
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await search(query, ['track', 'album', 'artist'])
+
+      const tracks = (data.tracks?.items || []).map(formatTrack).filter(Boolean)
+      const albums = (data.albums?.items || []).map(formatAlbum).filter(Boolean)
+      const artists = (data.artists?.items || []).map(formatArtist).filter(Boolean)
+
+      const results = { tracks, albums, artists }
+      setSearchResults(results)
+      return results
+    } catch (err) {
+      console.error('Error searching:', err)
+      setError(err.message)
+      return { tracks: [], albums: [], artists: [] }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Legacy search for tracks only (for backward compatibility)
+  const searchTracks = useCallback(async (query) => {
+    if (!query.trim()) {
+      setSearchResults({ tracks: [], albums: [], artists: [] })
       return []
     }
 
     setIsLoading(true)
     setError(null)
     try {
-      console.log('Calling Spotify search API...')
-      const data = await search(query, ['track'])
-      console.log('Raw API response:', data)
-      console.log('Tracks items count:', data?.tracks?.items?.length || 0)
-      const formattedTracks = data.tracks.items.map(formatTrack).filter(Boolean)
-      console.log('Formatted tracks count:', formattedTracks.length)
-      setSearchResults(formattedTracks)
-      return formattedTracks
+      const data = await search(query, ['track', 'album', 'artist'])
+      const tracks = (data.tracks?.items || []).map(formatTrack).filter(Boolean)
+      const albums = (data.albums?.items || []).map(formatAlbum).filter(Boolean)
+      const artists = (data.artists?.items || []).map(formatArtist).filter(Boolean)
+
+      setSearchResults({ tracks, albums, artists })
+      return tracks // Return tracks for backward compatibility
     } catch (err) {
       console.error('Error searching:', err)
       setError(err.message)
@@ -169,7 +200,7 @@ export function SpotifyProvider({ children }) {
 
   // Clear search results
   const clearSearch = useCallback(() => {
-    setSearchResults([])
+    setSearchResults({ tracks: [], albums: [], artists: [] })
   }, [])
 
   // Select a playlist
@@ -195,6 +226,7 @@ export function SpotifyProvider({ children }) {
     fetchPlaylistTracks,
     fetchLikedSongs,
     searchTracks,
+    searchAll,
     clearSearch,
     selectPlaylist,
     fetchUserProfile

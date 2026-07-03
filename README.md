@@ -1,78 +1,160 @@
-# PixelPod
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React 18" />
+  <img src="https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white" alt="Vite 5" />
+  <img src="https://img.shields.io/badge/Express-4-000000?logo=express&logoColor=white" alt="Express 4" />
+  <img src="https://img.shields.io/badge/Spotify-Web%20API-1DB954?logo=spotify&logoColor=white" alt="Spotify Web API" />
+  <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT License" />
+</p>
 
-PixelPod is an iPod-inspired Spotify player built with React, Vite, and Express. It recreates the feel of a classic click-wheel music player while using Spotify for authentication, library browsing, search, and playback.
+# 🎵 PixelPod
 
-The app now includes a polished iPod-style shell, playlist and liked-song browsing, categorized search, a refined Now Playing screen, theme and skin switching, stronger error handling, a cleaner service-driven architecture, and automated tests.
+**An iPod Classic–inspired web music player powered by Spotify.**
 
-## Highlights
+PixelPod recreates the nostalgic iPod Classic experience in the browser — complete with a rotary click wheel, screen transitions, and tactile audio feedback — while streaming your real Spotify library. Browse playlists, liked songs, and the Spotify catalog through a pixel-perfect retro interface that responds to both mouse and keyboard input.
 
-- Classic iPod-style interface with a custom screen and click wheel
-- Spotify OAuth login with PKCE
-- Browse playlists and liked songs
-- Search tracks, albums, and artists
-- Playback controls with progress, seek, shuffle, repeat, and volume
-- Theme and skin switching from Settings
-- Keyboard navigation support alongside click-wheel controls
-- Production-ready Express auth server with health check and optional static frontend serving
-- Automated unit and integration tests with Vitest and Testing Library
+> **Requires Spotify Premium** for full playback. Free accounts can authenticate, browse, and search.
 
-## Tech Stack
+---
 
-- React 18
-- Vite
-- Express
-- Spotify Web API
-- Spotify Web Playback SDK
-- Vitest
-- Testing Library
+## ✨ Features
 
-## Project Structure
+- **Click Wheel Navigation** — Drag the circular wheel to scroll; press directional buttons and the center button to navigate, just like the real thing.
+- **Spotify Integration** — OAuth 2.0 + PKCE login, playlist browsing, liked songs, and catalog search.
+- **Web Playback SDK** — Stream music directly in the browser via the Spotify Web Playback SDK.
+- **Shuffle & Repeat** — Full shuffle/repeat controls with local queue management for liked songs.
+- **Themes & Skins** — Switch between *Classic* and *Modern* screen themes, and *Silver*, *Graphite*, or *Blue* iPod skins.
+- **Audio Feedback** — Synthesized click, select, and back sounds via the Web Audio API.
+- **Keyboard Shortcuts** — Arrow keys, Enter, Escape, Space, `S` (shuffle), `R` (repeat), `M` (mute), `+`/`-` (volume).
+- **Responsive & Accessible** — Works on all screen sizes; respects `prefers-reduced-motion`.
 
-```text
-.
-|-- server/                 # Express auth server and production entrypoint
-|-- src/
-|   |-- components/         # iPod shell, screen, click wheel
-|   |-- context/            # Auth, Spotify data, playback providers
-|   |-- hooks/              # Reusable app hooks
-|   |-- screens/            # Boot, login, menu, search, settings, now playing
-|   |-- services/           # Auth, Spotify, playback service layer
-|   |-- test/               # Shared test setup
-|   `-- utils/              # Spotify helpers, sound helpers, logger
-|-- .env.example
-|-- SETUP.md
-|-- package.json
-`-- vite.config.js
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend Framework** | React 18 (Vite 5, ES Modules) |
+| **Styling** | Vanilla CSS with CSS Custom Properties (design-token architecture) |
+| **Backend / Auth Server** | Node.js + Express 4 |
+| **Music Streaming** | Spotify Web API + Spotify Web Playback SDK |
+| **Auth Flow** | OAuth 2.0 Authorization Code with PKCE (server-managed verifiers) |
+| **HTTP Client** | `fetch` (browser) / `axios` (server) |
+| **Testing** | Vitest + React Testing Library + jsdom |
+| **Build Tool** | Vite 5 with manual chunk splitting |
+| **Dev Tooling** | Concurrently (parallel dev servers), dotenv |
+
+---
+
+## 🏗 Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Browser                                                        │
+│                                                                 │
+│  ┌──────────┐    ┌───────────┐    ┌──────────────────────────┐  │
+│  │  App.jsx  │◄──►│  Contexts  │◄──►│  Services / Utils        │  │
+│  │ (State +  │    │ Auth       │    │ authService.js           │  │
+│  │  Routing) │    │ Spotify    │    │ spotifyService.js        │  │
+│  └─────┬─────┘    │ Playback   │    │ playbackService.js       │  │
+│        │         └───────────┘    │ spotifyAuth.js            │  │
+│        ▼                          │ spotifyApi.js             │  │
+│  ┌──────────┐                     └──────────┬───────────────┘  │
+│  │  IPod     │                                │                  │
+│  │ ├ Screen  │                                │                  │
+│  │ └ Wheel   │                                │                  │
+│  └──────────┘                                │                  │
+│        │                                      │                  │
+└────────┼──────────────────────────────────────┼──────────────────┘
+         │  Renders Screens                     │  HTTPS
+         ▼                                      ▼
+  ┌────────────────┐                 ┌─────────────────────┐
+  │ Boot / Login   │                 │  Express Auth Server │
+  │ Menu / Search  │                 │  /api/auth/login     │
+  │ NowPlaying     │                 │  /api/auth/token     │
+  │ Settings       │                 │  /api/auth/refresh   │
+  └────────────────┘                 └──────────┬──────────┘
+                                                │
+                                                ▼
+                                     ┌─────────────────────┐
+                                     │  Spotify Accounts    │
+                                     │  & Web API           │
+                                     └─────────────────────┘
 ```
 
-## Requirements
+### Data Flow
 
-- Node.js 18+
-- npm
-- A Spotify Developer app
-- A Spotify Premium account for full playback support
+1. **Authentication** — The user clicks "Connect Spotify". The frontend requests `/api/auth/login` from the Express server, which generates a PKCE code verifier/challenge pair, stores the verifier in memory, and returns the Spotify authorization URL. After the user authorizes, the callback hits `/api/auth/token` to exchange the code for tokens.
 
-## Quick Start
+2. **Library Browsing** — Authenticated API calls go through `spotifyApi.js → fetchWithAuth()`, which attaches the current access token, handles 401/403 errors with automatic token refresh, and surfaces user-friendly error messages.
 
-1. Install dependencies:
+3. **Playback** — The Spotify Web Playback SDK is initialized as a browser-side player device. `PlaybackContext` manages device registration, state sync (progress, shuffle, repeat), and delegates play/pause/seek commands through `playbackService.js`.
+
+4. **Navigation** — `App.jsx` acts as a state machine, managing screen transitions via a `menuHistory` stack. The `Screen` component applies CSS slide animations, and `ClickWheel` converts circular mouse drag into scroll events via angular velocity tracking.
+
+---
+
+## 📂 Project Structure
+
+```
+pixelpod/
+├── server/
+│   └── index.js              # Express auth server (PKCE, token exchange, CORS)
+├── src/
+│   ├── components/            # UI building blocks (IPod, Screen, ClickWheel)
+│   ├── screens/               # Full-screen views (Boot, Login, Menu, NowPlaying, Search, Settings)
+│   ├── context/               # React Contexts (Auth, Spotify data, Playback)
+│   ├── hooks/                 # Custom hooks (wheel input, keyboard nav, debounce)
+│   ├── services/              # Business logic layer (auth, spotify, playback)
+│   ├── utils/                 # Low-level utilities (API wrappers, token management, sounds, logger)
+│   ├── data/                  # Static mock data (development)
+│   ├── __tests__/             # Integration tests
+│   └── test/                  # Test setup and configuration
+├── .env.example               # Environment variable template
+├── vite.config.js             # Vite + Vitest configuration
+├── SETUP.md                   # Detailed Spotify developer setup guide
+└── package.json
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js** ≥ 18
+- **npm** ≥ 9
+- A **Spotify Developer** account ([developer.spotify.com/dashboard](https://developer.spotify.com/dashboard))
+- A **Spotify Premium** subscription (required for in-browser playback)
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/DevAbduIIah/PixelPod.git
+cd PixelPod
+```
+
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-2. Copy the example environment file:
+### 3. Create a Spotify App
+
+1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+2. Click **Create App** and fill in:
+   - **App name**: `PixelPod`
+   - **Redirect URI**: `http://127.0.0.1:5174/callback`
+   - Enable **Web API** and **Web Playback SDK**.
+3. Save and copy your **Client ID** and **Client Secret**.
+
+### 4. Configure Environment Variables
 
 ```bash
 cp .env.example .env
 ```
 
-PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-3. Fill in your Spotify app credentials:
+Edit `.env` with your credentials:
 
 ```env
 SPOTIFY_CLIENT_ID=your_client_id_here
@@ -81,125 +163,61 @@ REDIRECT_URI=http://127.0.0.1:5174/callback
 PORT=3001
 ```
 
-4. Start the app in development:
+> See [SETUP.md](SETUP.md) for optional environment variables and production deployment.
+
+### 5. Run the App
 
 ```bash
 npm run dev:full
 ```
 
-5. Open:
+This starts both the Express auth server (port 3001) and the Vite dev server (port 5174) concurrently. Open [http://127.0.0.1:5174](http://127.0.0.1:5174) in your browser.
 
-```text
-http://127.0.0.1:5174
-```
-
-## Environment Variables
-
-Required server variables:
-
-```env
-SPOTIFY_CLIENT_ID=your_client_id_here
-SPOTIFY_CLIENT_SECRET=your_client_secret_here
-REDIRECT_URI=http://127.0.0.1:5174/callback
-PORT=3001
-```
-
-Optional variables:
-
-```env
-# Restrict the auth server to a known frontend origin
-FRONTEND_ORIGIN=http://127.0.0.1:5174
-
-# Optional comma-separated extra origins
-CORS_ORIGIN=
-
-# Leave empty for same-origin requests.
-# In local dev, Vite proxies /api to VITE_API_PROXY_TARGET.
-VITE_API_BASE_URL=
-VITE_API_PROXY_TARGET=http://127.0.0.1:3001
-
-# Defaults to local in development and session in production
-VITE_TOKEN_STORAGE=session
-```
-
-## Available Scripts
-
-- `npm run dev` starts the Vite frontend on `127.0.0.1:5174`
-- `npm run server` starts the Express auth server on port `3001`
-- `npm run dev:full` runs frontend and backend together
-- `npm run build` builds the frontend into `dist/`
-- `npm run preview` previews the production frontend build
-- `npm start` starts the Express server and can serve `dist/`
-- `npm run test` starts Vitest in watch mode
-- `npm run test:run` runs the test suite once
-
-## Spotify App Setup
-
-Create a Spotify app in the Spotify Developer Dashboard and configure:
-
-- Redirect URI: `http://127.0.0.1:5174/callback`
-- Use case: Spotify Web API
-- Playback note: browser playback uses the Spotify Web Playback SDK
-
-After creating the app, copy the Client ID and Client Secret into `.env`.
-
-## Controls
-
-PixelPod supports both keyboard input and the on-screen wheel.
-
-- `ArrowUp` / `ArrowDown`: move through menus and results
-- `Enter`: select
-- `Escape`: go back
-- `Space`: play or pause on Now Playing
-- `ArrowLeft` / `ArrowRight`: skip back or forward
-- `S`: toggle shuffle
-- `R`: cycle repeat mode
-- `+` / `-`: raise or lower volume
-- `M`: mute or restore volume
-- Mouse drag on the wheel: simulate click-wheel scrolling
-
-## Testing
-
-The test suite covers both logic and user flow.
-
-- Auth service behavior
-- Playback service requests
-- Spotify service pagination and mapping
-- Utility formatter output
-- App-level navigation into Settings and Now Playing
-
-Run tests with:
+### 6. Run Tests
 
 ```bash
-npm run test:run
+npm test           # Watch mode
+npm run test:run   # Single run
 ```
 
-## Production Notes
+---
 
-- The Express server exposes `/api/health` for readiness checks.
-- If `dist/` exists, the server can also serve the built frontend.
-- Browser token storage defaults to `sessionStorage` in production to reduce token persistence.
-- CORS can be restricted with `FRONTEND_ORIGIN` and `CORS_ORIGIN`.
+## ⌨️ Keyboard Shortcuts
 
-Production flow:
+| Key | Action |
+|---|---|
+| `↑` / `↓` | Navigate menu items |
+| `Enter` | Select / Confirm |
+| `Escape` | Go back |
+| `Space` | Play / Pause |
+| `←` / `→` | Skip back / forward |
+| `S` | Toggle shuffle |
+| `R` | Cycle repeat mode |
+| `+` / `-` | Volume up / down |
+| `M` | Mute / unmute |
 
-```bash
-npm run build
-npm start
-```
+---
 
-## How It Works
+## 🗺 Future Roadmap
 
-- The Express server handles Spotify OAuth code exchange and refresh.
-- The React app stores Spotify tokens in browser storage and restores sessions on load.
-- Spotify data is fetched through a service layer and exposed via React context.
-- Playback is controlled in-browser through the Spotify Web Playback SDK.
-- The iPod shell and screen system manage navigation, transitions, and click-wheel interactions.
+- [ ] **Album Browsing** — Navigate and play full albums from search results.
+- [ ] **Artist Pages** — View top tracks and discography for individual artists.
+- [ ] **Queue Management** — View, reorder, and clear the upcoming queue from a dedicated screen.
+- [ ] **Recently Played** — Surface recently played tracks (API endpoint already exists in `spotifyApi.js`).
+- [ ] **Touch / Mobile Support** — Implement touch-based wheel gestures for mobile browsers.
+- [ ] **PWA Support** — Add a service worker and manifest for installable, offline-capable experience.
+- [ ] **Accessibility Audit** — Full ARIA labeling, screen reader announcements, and focus management.
+- [ ] **End-to-End Tests** — Playwright or Cypress tests for critical user flows (login, playback, navigation).
+- [ ] **CI/CD Pipeline** — GitHub Actions workflow for linting, testing, and deployment.
 
-## Notes
+---
 
-- Full playback requires Spotify Premium.
-- The auth server must be running for login and token refresh unless you are serving the built app through `npm start`.
-- `.env`, `node_modules`, and build output should not be committed.
+## 📄 License
 
-More detailed setup and deployment notes are in [SETUP.md]
+This project is open source and available under the [MIT License](LICENSE).
+
+---
+
+<p align="center">
+  <sub>Built with 🎧 and nostalgia.</sub>
+</p>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { getValidToken } from '../utils/spotifyAuth'
+import { formatTrack } from '../utils/spotifyApi'
 import {
   transferPlaybackToDevice,
   startPlaybackSession,
@@ -16,22 +17,7 @@ const PlaybackContext = createContext(null)
 // Repeat modes: 'off' | 'context' | 'track'
 const REPEAT_MODES = ['off', 'context', 'track']
 
-function formatPlaybackTrack(track) {
-  if (!track?.uri || !track?.name) {
-    return null
-  }
 
-  return {
-    id: track.id || track.uri,
-    uri: track.uri,
-    title: track.name,
-    artist: track.artists?.map((artist) => artist.name).join(', ') || 'Unknown Artist',
-    album: track.album?.name || 'Unknown Album',
-    albumArt: track.album?.images?.[0]?.url || null,
-    albumArtSmall: track.album?.images?.[2]?.url || track.album?.images?.[0]?.url || null,
-    duration: track.duration_ms ?? 0
-  }
-}
 
 export function PlaybackProvider({ children }) {
   const { isAuthenticated } = useAuth()
@@ -111,7 +97,7 @@ export function PlaybackProvider({ children }) {
           setIsPlaying(!state.paused)
           setCurrentProgress(state.position)
           setDuration(state.duration)
-          setCurrentTrack(formatPlaybackTrack(state.track_window?.current_track))
+          setCurrentTrack(formatTrack(state.track_window?.current_track))
           setIsLoading(false)
 
           if (state.shuffle !== undefined) {

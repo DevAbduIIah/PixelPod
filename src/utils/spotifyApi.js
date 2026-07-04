@@ -141,14 +141,14 @@ export function formatTrack(track) {
   }
 
   return {
-    id: actualTrack.id,
+    id: actualTrack.id || actualTrack.uri,
     uri: actualTrack.uri,
     title: actualTrack.name,
     artist: actualTrack.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
     album: actualTrack.album?.name || 'Unknown Album',
     albumArt: actualTrack.album?.images?.[0]?.url || null,
     albumArtSmall: actualTrack.album?.images?.[2]?.url || actualTrack.album?.images?.[0]?.url || null,
-    duration: actualTrack.duration_ms,
+    duration: actualTrack.duration_ms ?? 0,
     previewUrl: actualTrack.preview_url
   }
 }

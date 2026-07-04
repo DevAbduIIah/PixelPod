@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import IPod from './components/IPod'
-import { useSpotifyAuth } from './hooks/useSpotifyAuth'
+import { useAuth as useSpotifyAuth } from './context/AuthContext'
 import { useSpotify } from './context/SpotifyContext'
-import { usePlayback } from './hooks/usePlayback'
+import { usePlayback } from './context/PlaybackContext'
 import { logger } from './utils/logger'
 import './App.css'
 

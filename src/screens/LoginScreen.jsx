@@ -1,8 +1,8 @@
-import { useSpotifyAuth } from '../hooks/useSpotifyAuth'
+import { useAuth } from '../context/AuthContext'
 import './LoginScreen.css'
 
 function LoginScreen() {
-  const { login, isLoading, error } = useSpotifyAuth()
+  const { login, isLoading, error } = useAuth()
 
   const getLoginState = () => {
     if (!error) return null

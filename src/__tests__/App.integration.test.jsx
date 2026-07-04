@@ -43,15 +43,15 @@ const mockPlaybackState = vi.hoisted(() => ({
   error: null
 }))
 
-vi.mock('../hooks/useSpotifyAuth', () => ({
-  useSpotifyAuth: () => mockAuthState
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => mockAuthState
 }))
 
 vi.mock('../context/SpotifyContext', () => ({
   useSpotify: () => mockSpotifyState
 }))
 
-vi.mock('../hooks/usePlayback', () => ({
+vi.mock('../context/PlaybackContext', () => ({
   usePlayback: () => mockPlaybackState
 }))
 

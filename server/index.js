@@ -18,9 +18,92 @@ const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
 const REDIRECT_URI = process.env.REDIRECT_URI || 'http://127.0.0.1:5174/callback'
 const HAS_STATIC_BUILD = fs.existsSync(DIST_DIR)
 const PKCE_TTL_MS = 10 * 60 * 1000
+const RATE_LIMIT_WINDOW_MS = 60 * 1000
+const RATE_LIMIT_MAX = 10
 
 const app = express()
 app.disable('x-powered-by')
+
+// ---------------------------------------------------------------------------
+// In-memory rate limiter (per-IP, sliding window)
+// ---------------------------------------------------------------------------
+const rateLimitStore = new Map()
+
+function authRateLimiter(req, res, next) {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown'
+  const now = Date.now()
+  const windowStart = now - RATE_LIMIT_WINDOW_MS
+
+  let entry = rateLimitStore.get(ip)
+
+  if (!entry) {
+    entry = { timestamps: [] }
+    rateLimitStore.set(ip, entry)
+  }
+
+  // Drop timestamps outside the current window
+  entry.timestamps = entry.timestamps.filter((t) => t > windowStart)
+
+  if (entry.timestamps.length >= RATE_LIMIT_MAX) {
+    const retryAfterMs = entry.timestamps[0] + RATE_LIMIT_WINDOW_MS - now
+    res.set('Retry-After', String(Math.ceil(retryAfterMs / 1000)))
+    return res.status(429).json({
+      error: 'Too many requests. Please try again later.',
+      retryAfterSeconds: Math.ceil(retryAfterMs / 1000)
+    })
+  }
+
+  entry.timestamps.push(now)
+  next()
+}
+
+// Cleanup stale rate-limit entries every 5 minutes
+setInterval(() => {
+  const cutoff = Date.now() - RATE_LIMIT_WINDOW_MS
+  for (const [ip, entry] of rateLimitStore.entries()) {
+    entry.timestamps = entry.timestamps.filter((t) => t > cutoff)
+    if (entry.timestamps.length === 0) {
+      rateLimitStore.delete(ip)
+    }
+  }
+}, 5 * 60 * 1000).unref()
+
+// ---------------------------------------------------------------------------
+// Input validation helpers
+// ---------------------------------------------------------------------------
+const HEX_32_RE = /^[0-9a-f]{32}$/
+
+function validateTokenInput(body) {
+  const errors = []
+  const { code, state } = body || {}
+
+  if (typeof code !== 'string' || code.length === 0) {
+    errors.push('code must be a non-empty string')
+  } else if (code.length > 512) {
+    errors.push('code must not exceed 512 characters')
+  }
+
+  if (typeof state !== 'string' || state.length === 0) {
+    errors.push('state must be a non-empty string')
+  } else if (!HEX_32_RE.test(state)) {
+    errors.push('state must be a 32-character hex string')
+  }
+
+  return errors
+}
+
+function validateRefreshInput(body) {
+  const errors = []
+  const refreshToken = body?.refresh_token
+
+  if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
+    errors.push('refresh_token must be a non-empty string')
+  } else if (refreshToken.length > 512) {
+    errors.push('refresh_token must not exceed 512 characters')
+  }
+
+  return errors
+}
 
 const buildAllowedOrigins = () => {
   const configuredOrigins = [
@@ -188,16 +271,17 @@ app.get('/api/auth/login', (_req, res) => {
   })
 })
 
-app.post('/api/auth/token', async (req, res) => {
+app.post('/api/auth/token', authRateLimiter, async (req, res) => {
   if (!requireSpotifyConfig(res)) {
     return
   }
 
-  const { code, state } = req.body
-
-  if (!code || !state) {
-    return res.status(400).json({ error: 'Authorization code and state are required' })
+  const validationErrors = validateTokenInput(req.body)
+  if (validationErrors.length > 0) {
+    return res.status(400).json({ error: 'Invalid input', details: validationErrors })
   }
+
+  const { code, state } = req.body
 
   const codeVerifier = getVerifier(state)
   if (!codeVerifier) {
@@ -239,16 +323,17 @@ app.post('/api/auth/token', async (req, res) => {
   }
 })
 
-app.post('/api/auth/refresh', async (req, res) => {
+app.post('/api/auth/refresh', authRateLimiter, async (req, res) => {
   if (!requireSpotifyConfig(res)) {
     return
   }
 
-  const { refresh_token: refreshToken } = req.body
-
-  if (!refreshToken) {
-    return res.status(400).json({ error: 'Refresh token is required' })
+  const validationErrors = validateRefreshInput(req.body)
+  if (validationErrors.length > 0) {
+    return res.status(400).json({ error: 'Invalid input', details: validationErrors })
   }
+
+  const { refresh_token: refreshToken } = req.body
 
   try {
     const response = await axios.post(

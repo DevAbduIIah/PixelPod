@@ -79,8 +79,8 @@ function validateTokenInput(body) {
 
   if (typeof code !== 'string' || code.length === 0) {
     errors.push('code must be a non-empty string')
-  } else if (code.length > 512) {
-    errors.push('code must not exceed 512 characters')
+  } else if (code.length > 2048) {
+    errors.push('code must not exceed 2048 characters')
   }
 
   if (typeof state !== 'string' || state.length === 0) {

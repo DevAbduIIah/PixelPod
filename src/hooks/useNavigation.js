@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 
-const createStatusItem = (tone, title, detail, code = null) => ({
+const buildStatusEntry = (tone, title, detail, code = null) => ({
   type: 'status',
   tone,
   title,
@@ -25,7 +25,7 @@ export default function useNavigation({
   const [transitionDirection, setTransitionDirection] = useState('forward')
   const [searchMode, setSearchMode] = useState('keyboard')
 
-  const getSearchTrackResults = useCallback(() => {
+  const getSearchResults = useCallback(() => {
     if (Array.isArray(searchResults)) {
       return searchResults
     }
@@ -46,28 +46,28 @@ export default function useNavigation({
         normalizedError.includes('permissions changed') ||
         normalizedError.includes('connect spotify again')
       ) {
-        return createStatusItem('error', 'Login Expired', 'Connect Spotify again to refresh your library.', 'AUTH')
+        return buildStatusEntry('error', 'Login Expired', 'Connect Spotify again to refresh your library.', 'AUTH')
       }
 
       if (
         screenName === 'playlistTracks' &&
         (normalizedError.includes('private') || normalizedError.includes('deleted') || normalizedError.includes('not found'))
       ) {
-        return createStatusItem('error', 'Playlist Unavailable', 'This playlist could not be opened right now.', 'LOCK')
+        return buildStatusEntry('error', 'Playlist Unavailable', 'This playlist could not be opened right now.', 'LOCK')
       }
 
-      return createStatusItem('error', 'Library Unavailable', 'PixelPod could not load Spotify data right now.', 'SYNC')
+      return buildStatusEntry('error', 'Library Unavailable', 'PixelPod could not load Spotify data right now.', 'SYNC')
     }
 
     if (screenName === 'playlists') {
-      return createStatusItem('empty', 'No Playlists Found', 'Save or create a playlist in Spotify to see it here.', 'LIST')
+      return buildStatusEntry('empty', 'No Playlists Found', 'Save or create a playlist in Spotify to see it here.', 'LIST')
     }
 
     if (screenName === 'songs') {
-      return createStatusItem('empty', 'No Liked Songs', 'Add tracks to Your Library and they will appear here.', 'LIKE')
+      return buildStatusEntry('empty', 'No Liked Songs', 'Add tracks to Your Library and they will appear here.', 'LIKE')
     }
 
-    return createStatusItem('empty', 'No Tracks Found', 'There are no playable tracks in this view yet.', 'NOTE')
+    return buildStatusEntry('empty', 'No Tracks Found', 'There are no playable tracks in this view yet.', 'NOTE')
   }, [spotifyError, authError])
 
   const getMenuItems = useCallback(() => {
@@ -77,10 +77,10 @@ export default function useNavigation({
       case 'music':
         return ['Playlists', 'Liked Songs', 'Search']
       case 'playlists':
-        if (spotifyLoading) return [createStatusItem('loading', 'Loading Playlists', 'Syncing your Spotify library.', 'LOAD')]
+        if (spotifyLoading) return [buildStatusEntry('loading', 'Loading Playlists', 'Syncing your Spotify library.', 'LOAD')]
         return playlists.length > 0 ? playlists : [getLibraryStatusItem('playlists')]
       case 'playlistTracks':
-        if (spotifyLoading) return [createStatusItem('loading', 'Loading Tracks', 'Reading this playlist from Spotify.', 'LOAD')]
+        if (spotifyLoading) return [buildStatusEntry('loading', 'Loading Tracks', 'Reading this playlist from Spotify.', 'LOAD')]
         return currentPlaylistTracks.length > 0
           ? currentPlaylistTracks.map((track) => ({
               ...track,
@@ -88,7 +88,7 @@ export default function useNavigation({
             }))
           : [getLibraryStatusItem('playlistTracks')]
       case 'songs':
-        if (spotifyLoading) return [createStatusItem('loading', 'Loading Library', 'Checking your liked songs.', 'LOAD')]
+        if (spotifyLoading) return [buildStatusEntry('loading', 'Loading Library', 'Checking your liked songs.', 'LOAD')]
         return likedSongs.length > 0
           ? likedSongs.map((track) => ({
               ...track,
@@ -129,7 +129,7 @@ export default function useNavigation({
   }, [menuHistory, currentScreen, searchMode, selectPlaylist])
 
   const handleNext = useCallback(() => {
-    const searchTrackResults = getSearchTrackResults()
+    const searchTrackResults = getSearchResults()
 
     if (currentScreen === 'search' && searchMode === 'results' && searchTrackResults.length > 0) {
       setSelectedIndex((previousIndex) => (previousIndex + 1) % searchTrackResults.length)
@@ -140,10 +140,10 @@ export default function useNavigation({
     if (items.length > 0) {
       setSelectedIndex((previousIndex) => (previousIndex + 1) % items.length)
     }
-  }, [currentScreen, searchMode, getSearchTrackResults, getMenuItems])
+  }, [currentScreen, searchMode, getSearchResults, getMenuItems])
 
   const handlePrevious = useCallback(() => {
-    const searchTrackResults = getSearchTrackResults()
+    const searchTrackResults = getSearchResults()
 
     if (currentScreen === 'search' && searchMode === 'results' && searchTrackResults.length > 0) {
       setSelectedIndex((previousIndex) => (
@@ -156,7 +156,7 @@ export default function useNavigation({
     if (items.length > 0) {
       setSelectedIndex((previousIndex) => (previousIndex - 1 + items.length) % items.length)
     }
-  }, [currentScreen, searchMode, getSearchTrackResults, getMenuItems])
+  }, [currentScreen, searchMode, getSearchResults, getMenuItems])
 
   const resetNavigation = useCallback(() => {
     setCurrentScreen('boot')
@@ -180,7 +180,7 @@ export default function useNavigation({
     handleNext,
     handlePrevious,
     getMenuItems,
-    getSearchTrackResults,
+    getSearchResults,
     resetNavigation
   }
 }

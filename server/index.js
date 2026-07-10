@@ -21,6 +21,12 @@ const PKCE_TTL_MS = 10 * 60 * 1000
 const RATE_LIMIT_WINDOW_MS = 60 * 1000
 const RATE_LIMIT_MAX = 10
 
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  console.error('[PixelPod] SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET must be set in .env')
+  console.error('[PixelPod] Copy .env.example to .env and fill in your Spotify app credentials.')
+  process.exit(1)
+}
+
 const app = express()
 app.disable('x-powered-by')
 

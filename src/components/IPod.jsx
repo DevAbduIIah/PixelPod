@@ -60,26 +60,16 @@ function IPod({
     }
   }, [])
 
-  // Wrapped handlers with sound effects
-  const handleNextWithSound = () => {
-    playClickSound()
-    onNext()
+  // HOF that wraps a handler with a sound effect
+  const withSound = (soundFn, handler) => () => {
+    soundFn()
+    handler()
   }
 
-  const handlePreviousWithSound = () => {
-    playClickSound()
-    onPrevious()
-  }
-
-  const handleSelectWithSound = () => {
-    playSelectSound()
-    onSelect()
-  }
-
-  const handleBackWithSound = () => {
-    playBackSound()
-    onBack()
-  }
+  const handleNextWithSound = withSound(playClickSound, onNext)
+  const handlePreviousWithSound = withSound(playClickSound, onPrevious)
+  const handleSelectWithSound = withSound(playSelectSound, onSelect)
+  const handleBackWithSound = withSound(playBackSound, onBack)
 
   useKeyboardNavigation({
     onNext: handleNextWithSound,

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useAuth } from './AuthContext'
 import { getValidToken } from '../utils/spotifyAuth'
 import { formatTrack } from '../utils/spotifyApi'
@@ -412,7 +412,7 @@ export function PlaybackProvider({ children }) {
     setVolume(volume + delta)
   }, [volume, setVolume])
 
-  const value = {
+  const value = useMemo(() => ({
     isReady,
     isPlaying,
     isLoading,
@@ -435,7 +435,30 @@ export function PlaybackProvider({ children }) {
     setVolume,
     adjustVolume,
     setError
-  }
+  }), [
+    isReady,
+    isPlaying,
+    isLoading,
+    currentProgress,
+    duration,
+    deviceId,
+    error,
+    currentTrack,
+    volume,
+    shuffleEnabled,
+    repeatMode,
+    play,
+    pause,
+    togglePlayPause,
+    next,
+    previous,
+    seek,
+    toggleShuffle,
+    cycleRepeatMode,
+    setVolume,
+    adjustVolume,
+    setError
+  ])
 
   return (
     <PlaybackContext.Provider value={value}>

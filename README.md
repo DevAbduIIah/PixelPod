@@ -100,17 +100,17 @@ pixelpod/
 ├── server/
 │   └── index.js              # Express auth server (PKCE, token exchange, CORS)
 ├── src/
-│   ├── components/            # UI building blocks (IPod, Screen, ClickWheel)
+│   ├── components/            # UI building blocks (IPod, Screen, ClickWheel, ErrorBoundary)
 │   ├── screens/               # Full-screen views (Boot, Login, Menu, NowPlaying, Search, Settings)
 │   ├── context/               # React Contexts (Auth, Spotify data, Playback)
-│   ├── hooks/                 # Custom hooks (wheel input, keyboard nav, debounce)
+│   ├── hooks/                 # Custom hooks (navigation, queue, wheel input, keyboard, debounce)
 │   ├── services/              # Business logic layer (auth, spotify, playback)
 │   ├── utils/                 # Low-level utilities (API wrappers, token management, sounds, logger)
-│   ├── data/                  # Static mock data (development)
-│   ├── __tests__/             # Integration tests
-│   └── test/                  # Test setup and configuration
+│   └── __tests__/             # Integration and unit tests
 ├── .env.example               # Environment variable template
 ├── vite.config.js             # Vite + Vitest configuration
+├── eslint.config.js           # ESLint flat config (React + hooks)
+├── .prettierrc                # Prettier formatting rules
 ├── SETUP.md                   # Detailed Spotify developer setup guide
 └── package.json
 ```

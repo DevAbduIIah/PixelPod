@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo } from 'react'
 import {
   fetchAllPlaylists,
   fetchAllPlaylistTracks,
@@ -122,29 +122,6 @@ export function SpotifyProvider({ children }) {
     }
   }, [])
 
-  // Legacy search for tracks only (for backward compatibility)
-  const searchTracks = useCallback(async (query) => {
-    if (!query.trim()) {
-      setSearchResults({ tracks: [], albums: [], artists: [] })
-      return []
-    }
-
-    setIsLoading(true)
-    setError(null)
-    try {
-      const { tracks, albums, artists } = await searchSpotifyCatalog(query)
-      setSearchResults({ tracks, albums, artists })
-      return tracks
-    } catch (err) {
-      logger.error('Error searching:', err)
-      setSearchResults({ tracks: [], albums: [], artists: [] })
-      setError(err.message)
-      return []
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
   // Fetch user profile
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -173,7 +150,7 @@ export function SpotifyProvider({ children }) {
     }
   }, [fetchPlaylistTracks])
 
-  const value = {
+  const value = useMemo(() => ({
     playlists,
     currentPlaylistTracks,
     likedSongs,
@@ -185,12 +162,27 @@ export function SpotifyProvider({ children }) {
     fetchPlaylists,
     fetchPlaylistTracks,
     fetchLikedSongs,
-    searchTracks,
     searchAll,
     clearSearch,
     selectPlaylist,
     fetchUserProfile
-  }
+  }), [
+    playlists,
+    currentPlaylistTracks,
+    likedSongs,
+    searchResults,
+    selectedPlaylist,
+    userProfile,
+    isLoading,
+    error,
+    fetchPlaylists,
+    fetchPlaylistTracks,
+    fetchLikedSongs,
+    searchAll,
+    clearSearch,
+    selectPlaylist,
+    fetchUserProfile
+  ])
 
   return (
     <SpotifyContext.Provider value={value}>

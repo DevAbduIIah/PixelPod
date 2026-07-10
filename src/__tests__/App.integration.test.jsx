@@ -21,7 +21,7 @@ const mockSpotifyState = vi.hoisted(() => ({
   fetchPlaylists: vi.fn(),
   fetchLikedSongs: vi.fn(),
   selectPlaylist: vi.fn(),
-  searchTracks: vi.fn(),
+  searchAll: vi.fn(),
   fetchUserProfile: vi.fn()
 }))
 
@@ -127,7 +127,7 @@ describe('App integration', () => {
         mockSpotifyState.selectedPlaylist = selectedPlaylist
         return mockSpotifyState.currentPlaylistTracks
       }),
-      searchTracks: vi.fn(),
+      searchAll: vi.fn(),
       fetchUserProfile: vi.fn()
     })
 

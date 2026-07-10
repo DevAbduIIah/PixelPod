@@ -1,6 +1,18 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import './NowPlayingScreen.css'
 
+// Album art crossfade timing (ms)
+const ART_SWAP_MS = 120
+const ART_SETTLE_MS = 260
+
+const formatTime = (ms) => {
+  if (!ms || ms < 0) return '0:00'
+  const totalSeconds = Math.floor(ms / 1000)
+  const mins = Math.floor(totalSeconds / 60)
+  const secs = totalSeconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
 function NowPlayingScreen({
   track,
   isPlaying,
@@ -40,11 +52,11 @@ function NowPlayingScreen({
 
       const swapTimer = setTimeout(() => {
         setDisplayedArt(track.albumArt)
-      }, 120)
+      }, ART_SWAP_MS)
 
       const settleTimer = setTimeout(() => {
         setIsTransitioning(false)
-      }, 260)
+      }, ART_SETTLE_MS)
 
       return () => {
         clearTimeout(swapTimer)
@@ -52,14 +64,6 @@ function NowPlayingScreen({
       }
     }
   }, [track?.albumArt, displayedArt])
-
-  const formatTime = (ms) => {
-    if (!ms || ms < 0) return '0:00'
-    const totalSeconds = Math.floor(ms / 1000)
-    const mins = Math.floor(totalSeconds / 60)
-    const secs = totalSeconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
 
   const handleProgressClick = useCallback((event) => {
     if (!progressBarRef.current || !duration || !onSeek) return

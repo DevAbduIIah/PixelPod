@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import IPod from './components/IPod'
 import { useAuth as useSpotifyAuth } from './context/AuthContext'
 import { useSpotify } from './context/SpotifyContext'
@@ -24,7 +24,7 @@ function App() {
     fetchPlaylists,
     fetchLikedSongs,
     selectPlaylist,
-    searchTracks,
+    searchAll,
     fetchUserProfile
   } = useSpotify()
   const {
@@ -63,7 +63,7 @@ function App() {
     handleNext,
     handlePrevious,
     getMenuItems,
-    getSearchTrackResults,
+    getSearchResults,
     resetNavigation
   } = useNavigation({
     playlists,
@@ -180,7 +180,7 @@ function App() {
     if (spotifyLoading) return
 
     if (currentScreen === 'search') {
-      const searchTrackResults = getSearchTrackResults()
+      const searchTrackResults = getSearchResults()
 
       if (searchTrackResults.length > 0 && searchMode === 'results') {
         const track = searchTrackResults[selectedIndex]
@@ -266,7 +266,7 @@ function App() {
     selectedIndex,
     login,
     spotifyLoading,
-    getSearchTrackResults,
+    getSearchResults,
     searchMode,
     navigateForward,
     play,
@@ -286,13 +286,13 @@ function App() {
   ])
 
   const handleSearch = useCallback(async (query) => {
-    const results = await searchTracks(query)
+    const results = await searchAll(query)
 
-    if (results && results.length > 0) {
+    if (results?.tracks?.length > 0) {
       setSearchMode('results')
       setSelectedIndex(0)
     }
-  }, [searchTracks, setSearchMode, setSelectedIndex])
+  }, [searchAll, setSearchMode, setSelectedIndex])
 
   const handlePlayPause = useCallback(() => {
     if (currentTrack && playbackReady) {
@@ -300,6 +300,7 @@ function App() {
     }
   }, [currentTrack, playbackReady, togglePlayPause])
 
+  // Appearance (theme/skin) intentionally persists across logout — user preference, not session state
   const handleLogout = useCallback(() => {
     logout()
     resetNavigation()
@@ -316,11 +317,13 @@ function App() {
     setVolume(newVolume)
   }, [setVolume])
 
+  const menuItems = useMemo(() => getMenuItems(), [getMenuItems])
+
   return (
     <div className={`app theme-${theme} skin-${skin}`}>
       <IPod
         currentScreen={currentScreen}
-        menuItems={getMenuItems()}
+        menuItems={menuItems}
         selectedIndex={selectedIndex}
         onSelect={handleSelect}
         onBack={handleBack}

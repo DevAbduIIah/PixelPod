@@ -94,7 +94,7 @@ export async function getSavedTracks(limit = 50, offset = 0) {
 }
 
 // Search for tracks, artists, albums, playlists
-export async function search(query, types = ['track'], limit = 50) {
+export async function search(query, types = ['track']) {
   const typeString = types.join(',')
   const searchParams = new URLSearchParams({
     q: query,

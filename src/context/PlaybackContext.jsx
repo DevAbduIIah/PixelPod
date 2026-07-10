@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { useAuth } from './AuthContext'
-import { getValidToken } from '../utils/spotifyAuth'
-import { formatTrack } from '../utils/spotifyApi'
+import { useAuth } from '@/context/AuthContext'
+import { getValidToken } from '@/utils/spotifyAuth'
+import { formatTrack } from '@/utils/spotifyApi'
 import {
   transferPlaybackToDevice,
   startPlaybackSession,
@@ -9,13 +9,11 @@ import {
   updateShuffleState,
   updateRepeatMode,
   updatePlaybackVolume
-} from '../services/playbackService'
-import { logger } from '../utils/logger'
+} from '@/services/playbackService'
+import { logger } from '@/utils/logger'
+import { REPEAT_MODES } from '@/constants/playback'
 
 const PlaybackContext = createContext(null)
-
-// Repeat modes: 'off' | 'context' | 'track'
-const REPEAT_MODES = ['off', 'context', 'track']
 
 
 

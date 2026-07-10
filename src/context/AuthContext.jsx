@@ -4,8 +4,8 @@ import {
   completeAuthCallback,
   beginSpotifyLogin,
   clearAuthSession
-} from '../services/authService'
-import { logger } from '../utils/logger'
+} from '@/services/authService'
+import { logger } from '@/utils/logger'
 
 const AuthContext = createContext(null)
 

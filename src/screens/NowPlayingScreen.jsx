@@ -1,17 +1,10 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
+import { formatTime } from '@/utils/format'
 import './NowPlayingScreen.css'
 
 // Album art crossfade timing (ms)
 const ART_SWAP_MS = 120
 const ART_SETTLE_MS = 260
-
-const formatTime = (ms) => {
-  if (!ms || ms < 0) return '0:00'
-  const totalSeconds = Math.floor(ms / 1000)
-  const mins = Math.floor(totalSeconds / 60)
-  const secs = totalSeconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
 
 function NowPlayingScreen({
   track,

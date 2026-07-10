@@ -1,4 +1,4 @@
-import { useWheelInput } from '../hooks/useWheelInput'
+import { useWheelInput } from '@/hooks/useWheelInput'
 import './ClickWheel.css'
 
 function ClickWheel({ onSelect, onBack, onNext, onPrevious, onPlayPause, onSkipForward, onSkipBack }) {

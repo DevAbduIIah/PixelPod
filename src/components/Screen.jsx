@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import BootScreen from '../screens/BootScreen'
-import MenuScreen from '../screens/MenuScreen'
-import NowPlayingScreen from '../screens/NowPlayingScreen'
-import LoginScreen from '../screens/LoginScreen'
-import SearchScreen from '../screens/SearchScreen'
-import SettingsScreen from '../screens/SettingsScreen'
+import BootScreen from '@/screens/BootScreen'
+import MenuScreen from '@/screens/MenuScreen'
+import NowPlayingScreen from '@/screens/NowPlayingScreen'
+import LoginScreen from '@/screens/LoginScreen'
+import SearchScreen from '@/screens/SearchScreen'
+import SettingsScreen from '@/screens/SettingsScreen'
 import './Screen.css'
 
 // Transition timing (ms) for screen swap animations

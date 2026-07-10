@@ -7,6 +7,10 @@ import SearchScreen from '../screens/SearchScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import './Screen.css'
 
+// Transition timing (ms) for screen swap animations
+const TRANSITION_SWAP_MS = 160
+const TRANSITION_SETTLE_MS = 320
+
 function Screen({
   currentScreen,
   menuItems,
@@ -50,11 +54,11 @@ function Screen({
       const swapTimer = setTimeout(() => {
         setDisplayScreen(currentScreen)
         setTransitionPhase('entering')
-      }, 160)
+      }, TRANSITION_SWAP_MS)
 
       const settleTimer = setTimeout(() => {
         setTransitionPhase('idle')
-      }, 320)
+      }, TRANSITION_SETTLE_MS)
 
       return () => {
         clearTimeout(swapTimer)

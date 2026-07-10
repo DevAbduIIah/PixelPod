@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import {
   restoreAuthSession,
   completeAuthCallback,
@@ -100,14 +100,14 @@ export function AuthProvider({ children }) {
     setError(null)
   }, [])
 
-  const value = {
+  const value = useMemo(() => ({
     isAuthenticated,
     isLoading,
     error,
     user,
     login,
     logout
-  }
+  }), [isAuthenticated, isLoading, error, user, login, logout])
 
   return (
     <AuthContext.Provider value={value}>

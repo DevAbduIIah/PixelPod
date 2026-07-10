@@ -7,6 +7,15 @@ const CATEGORIES = ['Tracks', 'Albums', 'Artists']
 const RECENT_SEARCHES_KEY = 'pixelpod_recent_searches'
 const MAX_RECENT_SEARCHES = 5
 
+const getCategoryCount = (results, index) => {
+  if (Array.isArray(results)) {
+    return index === 0 ? results.length : 0
+  }
+
+  const counts = [results?.tracks?.length, results?.albums?.length, results?.artists?.length]
+  return counts[index] || 0
+}
+
 function SearchScreen({
   searchResults,
   selectedIndex,
@@ -165,11 +174,7 @@ function SearchScreen({
 
         <div className="category-tabs">
           {CATEGORIES.map((category, index) => {
-            const count = Array.isArray(searchResults)
-              ? (index === 0 ? searchResults.length : 0)
-              : (index === 0 ? searchResults.tracks?.length :
-                 index === 1 ? searchResults.albums?.length :
-                 searchResults.artists?.length) || 0
+            const count = getCategoryCount(searchResults, index)
 
             return (
               <button
@@ -242,11 +247,7 @@ function SearchScreen({
 
       <div className="category-tabs">
         {CATEGORIES.map((category, index) => {
-          const count = Array.isArray(searchResults)
-            ? (index === 0 ? searchResults.length : 0)
-            : (index === 0 ? searchResults?.tracks?.length :
-               index === 1 ? searchResults?.albums?.length :
-               searchResults?.artists?.length) || 0
+          const count = getCategoryCount(searchResults, index)
 
           return (
             <button

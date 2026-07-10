@@ -4,6 +4,9 @@ import './MenuScreen.css'
 function MenuScreen({ title, items, selectedIndex, isLoading }) {
   const selectedRef = useRef(null)
 
+  // Detect loading state: hook returns a single status item with tone='loading'
+  const isLoadingState = items.length === 1 && items[0]?.type === 'status' && items[0]?.tone === 'loading'
+
   useEffect(() => {
     if (selectedRef.current) {
       selectedRef.current.scrollIntoView({
@@ -80,40 +83,54 @@ function MenuScreen({ title, items, selectedIndex, isLoading }) {
         <div className="menu-title">{title}</div>
       </div>
 
-      <div className="menu-list" aria-busy={isLoading}>
-        {items.map((item, index) => {
-          const itemText = getItemText(item)
-          const subtitle = getItemSubtitle(item)
-          const itemImage = getItemImage(item)
-          const showArtwork = shouldRenderArtwork(item)
-          const statusItem = isStatusItem(item)
-
-          return (
-            <div
-              key={isObjectItem(item) && item.id ? item.id : index}
-              ref={index === selectedIndex ? selectedRef : null}
-              className={`menu-item ${index === selectedIndex && !statusItem ? 'selected' : ''} ${showArtwork ? 'has-artwork' : 'no-artwork'} ${statusItem ? `status-item ${item.tone || 'info'}` : ''}`}
-            >
-              <span className="item-marker" aria-hidden="true">{statusItem ? item.code || '...' : ''}</span>
-
-              {showArtwork && (
-                <div className={`item-thumbnail ${itemImage ? '' : 'fallback'}`}>
-                  {itemImage ? (
-                    <img src={itemImage} alt="" aria-hidden="true" />
-                  ) : (
-                    <span className="thumbnail-fallback">{getFallbackLabel(item)}</span>
-                  )}
-                </div>
-              )}
-
+      {isLoadingState ? (
+        <div className="menu-list" aria-busy="true" aria-label="Loading">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="menu-item skeleton-item no-artwork">
+              <div className="skeleton-marker" />
               <div className="item-content">
-                <span className="item-text" title={itemText}>{itemText}</span>
-                {subtitle && <span className="item-subtitle">{subtitle}</span>}
+                <div className="skeleton-title" />
+                <div className="skeleton-subtitle" />
               </div>
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="menu-list" aria-busy={isLoading}>
+          {items.map((item, index) => {
+            const itemText = getItemText(item)
+            const subtitle = getItemSubtitle(item)
+            const itemImage = getItemImage(item)
+            const showArtwork = shouldRenderArtwork(item)
+            const statusItem = isStatusItem(item)
+
+            return (
+              <div
+                key={isObjectItem(item) && item.id ? item.id : index}
+                ref={index === selectedIndex ? selectedRef : null}
+                className={`menu-item ${index === selectedIndex && !statusItem ? 'selected' : ''} ${showArtwork ? 'has-artwork' : 'no-artwork'} ${statusItem ? `status-item ${item.tone || 'info'}` : ''}`}
+              >
+                <span className="item-marker" aria-hidden="true">{statusItem ? item.code || '...' : ''}</span>
+
+                {showArtwork && (
+                  <div className={`item-thumbnail ${itemImage ? '' : 'fallback'}`}>
+                    {itemImage ? (
+                      <img src={itemImage} alt="" aria-hidden="true" />
+                    ) : (
+                      <span className="thumbnail-fallback">{getFallbackLabel(item)}</span>
+                    )}
+                  </div>
+                )}
+
+                <div className="item-content">
+                  <span className="item-text" title={itemText}>{itemText}</span>
+                  {subtitle && <span className="item-subtitle">{subtitle}</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

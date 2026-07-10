@@ -57,6 +57,20 @@
   position: relative;
   z-index: 1;
   animation: screenSettle var(--screen-motion-medium) var(--screen-ease);
+  outline: none; /* focus is programmatic, not user-initiated */
+}
+
+/* Visually hidden but accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .screen-content.exiting.slide-left {

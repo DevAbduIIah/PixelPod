@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import BootScreen from '@/screens/BootScreen'
 import MenuScreen from '@/screens/MenuScreen'
 import NowPlayingScreen from '@/screens/NowPlayingScreen'
@@ -46,6 +46,8 @@ function Screen({
 }) {
   const [displayScreen, setDisplayScreen] = useState(currentScreen)
   const [transitionPhase, setTransitionPhase] = useState('idle')
+  const [announcedScreen, setAnnouncedScreen] = useState('')
+  const screenContentRef = useRef(null)
 
   useEffect(() => {
     if (currentScreen !== displayScreen) {
@@ -58,6 +60,9 @@ function Screen({
 
       const settleTimer = setTimeout(() => {
         setTransitionPhase('idle')
+        // Announce new screen to screen readers and move keyboard focus
+        setAnnouncedScreen(currentScreen)
+        screenContentRef.current?.focus()
       }, TRANSITION_SETTLE_MS)
 
       return () => {
@@ -137,10 +142,22 @@ function Screen({
 
   return (
     <div className="screen">
+      {/* Visually-hidden live region for screen reader announcements */}
       <div
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {announcedScreen ? `Navigated to ${announcedScreen.replace(/([A-Z])/g, ' $1').trim()}` : ''}
+      </div>
+
+      <div
+        ref={screenContentRef}
         className={`screen-content ${transitionPhase} ${
           transitionDirection === 'forward' ? 'slide-left' : 'slide-right'
         }`}
+        tabIndex={-1}
+        outline="none"
       >
         {renderScreen(displayScreen)}
       </div>

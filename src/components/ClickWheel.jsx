@@ -2,13 +2,14 @@ import { useWheelInput } from '@/hooks/useWheelInput'
 import './ClickWheel.css'
 
 function ClickWheel({ onSelect, onBack, onNext, onPrevious, onPlayPause, onSkipForward, onSkipBack }) {
-  const { wheelHandlers } = useWheelInput({ onNext, onPrevious })
+  const { wheelHandlers, touchHandlers } = useWheelInput({ onNext, onPrevious })
 
   return (
     <div className="click-wheel">
       <div
         className="wheel-outer"
         {...wheelHandlers}
+        {...touchHandlers}
       >
         <div className="wheel-inner">
           <button className="center-button" onClick={onSelect}>

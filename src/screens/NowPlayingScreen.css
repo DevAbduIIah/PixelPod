@@ -83,14 +83,7 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.48),
     0 8px 16px rgba(27, 48, 67, 0.12);
-  transition:
-    transform var(--screen-motion-medium) var(--screen-ease),
-    opacity var(--screen-motion-medium) var(--screen-ease);
-}
-
-.album-art.transitioning {
-  opacity: 0.82;
-  transform: translateY(2px);
+  overflow: hidden;
 }
 
 .album-art-placeholder {
@@ -112,22 +105,32 @@
 }
 
 .album-art-image {
-  width: 70px;
-  height: 70px;
+  position: absolute;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
   border-radius: 11px;
   object-fit: cover;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 6px 14px rgba(27, 48, 67, 0.14);
   border: 1px solid rgba(28, 58, 82, 0.16);
-  transition:
-    transform 240ms var(--screen-ease),
-    filter 240ms var(--screen-ease),
-    opacity 240ms var(--screen-ease);
+}
+
+/* Two-layer CSS crossfade */
+.art-layer {
+  transition: opacity 220ms ease;
+  opacity: 1;
+}
+
+.art-layer.exiting {
+  opacity: 0;
+  z-index: 1;
 }
 
 .album-art-image.playing {
   transform: translateY(-1px);
+  transition: transform 240ms var(--screen-ease);
 }
 
 .loading-overlay {
@@ -196,6 +199,32 @@
 .empty-emblem.waiting,
 .empty-emblem.loading {
   animation: pulse 1.6s ease-in-out infinite;
+}
+
+/* Vinyl disc icon */
+.vinyl-icon {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
+.empty-emblem.waiting .vinyl-icon,
+.empty-emblem.loading .vinyl-icon {
+  animation: vinylSpin 3s linear infinite;
+}
+
+.empty-emblem.idle .vinyl-icon {
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes vinylSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinyl-icon {
+    animation: none !important;
+  }
 }
 
 .empty-title {
@@ -453,6 +482,7 @@
 
 .volume-fill {
   height: 100%;
+  width: var(--volume-val, 50%);
   background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.58), rgba(var(--accent-rgb), 0.82));
   transition: width var(--screen-motion-fast) ease;
   border-radius: 999px;

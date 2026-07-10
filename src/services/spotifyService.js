@@ -8,7 +8,7 @@ import {
   formatPlaylist,
   formatAlbum,
   formatArtist
-} from '../utils/spotifyApi'
+} from '@/utils/spotifyApi'
 
 const PAGE_SIZE = 50
 

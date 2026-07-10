@@ -1,17 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
+import { formatTime } from '@/utils/format'
 import './NowPlayingScreen.css'
-
-// Album art crossfade timing (ms)
-const ART_SWAP_MS = 120
-const ART_SETTLE_MS = 260
-
-const formatTime = (ms) => {
-  if (!ms || ms < 0) return '0:00'
-  const totalSeconds = Math.floor(ms / 1000)
-  const mins = Math.floor(totalSeconds / 60)
-  const secs = totalSeconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
 
 function NowPlayingScreen({
   track,
@@ -31,39 +20,28 @@ function NowPlayingScreen({
   playbackError,
   playbackReady
 }) {
-  const progressBarRef = useRef(null)
-  const [displayedArt, setDisplayedArt] = useState(track?.albumArt || null)
-  const [isTransitioning, setIsTransitioning] = useState(false)
+  // Two-layer CSS crossfade — no JS timers, GPU-accelerated
+  const [artLayers, setArtLayers] = useState({
+    current: track?.albumArt || null,
+    outgoing: null
+  })
 
   useEffect(() => {
-    if (!track?.albumArt) {
-      setDisplayedArt(null)
-      setIsTransitioning(false)
-      return
-    }
+    const incoming = track?.albumArt || null
+    if (incoming === artLayers.current) return
 
-    if (!displayedArt) {
-      setDisplayedArt(track.albumArt)
-      return
-    }
+    setArtLayers((prev) => ({
+      current: incoming,
+      outgoing: prev.current
+    }))
+  }, [track?.albumArt]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (track.albumArt !== displayedArt) {
-      setIsTransitioning(true)
+  const handleArtTransitionEnd = useCallback(() => {
+    setArtLayers((prev) => ({ ...prev, outgoing: null }))
+  }, [])
 
-      const swapTimer = setTimeout(() => {
-        setDisplayedArt(track.albumArt)
-      }, ART_SWAP_MS)
-
-      const settleTimer = setTimeout(() => {
-        setIsTransitioning(false)
-      }, ART_SETTLE_MS)
-
-      return () => {
-        clearTimeout(swapTimer)
-        clearTimeout(settleTimer)
-      }
-    }
-  }, [track?.albumArt, displayedArt])
+  const progressBarRef = useRef(null)
+  const volumeBarRef = useRef(null)
 
   const handleProgressClick = useCallback((event) => {
     if (!progressBarRef.current || !duration || !onSeek) return
@@ -146,7 +124,19 @@ function NowPlayingScreen({
         </div>
 
         <div className="empty-player">
-          <div className={`empty-emblem ${getStatusTone()}`}>{getStatusCode()}</div>
+          <div className={`empty-emblem ${getStatusTone()}`}>
+            {/* Vinyl / disc SVG — spins when connecting, pulses when idle */}
+            <svg className="vinyl-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
+              <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.25" />
+              <circle cx="20" cy="20" r="6" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.35" />
+              <circle cx="20" cy="20" r="2.5" fill="currentColor" fillOpacity="0.55" />
+              <line x1="20" y1="4" x2="20" y2="8" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3" strokeLinecap="round" />
+              <line x1="20" y1="32" x2="20" y2="36" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3" strokeLinecap="round" />
+              <line x1="4" y1="20" x2="8" y2="20" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3" strokeLinecap="round" />
+              <line x1="32" y1="20" x2="36" y2="20" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3" strokeLinecap="round" />
+            </svg>
+          </div>
 
           {!playbackReady ? (
             <>
@@ -177,12 +167,25 @@ function NowPlayingScreen({
       </div>
 
       <div className="album-showcase">
-        <div className={`album-art ${isTransitioning ? 'transitioning' : ''}`}>
-          {displayedArt ? (
+        <div className="album-art">
+          {/* Outgoing layer fades out */}
+          {artLayers.outgoing && (
             <img
-              src={displayedArt}
+              key={artLayers.outgoing}
+              src={artLayers.outgoing}
+              alt=""
+              className="album-art-image art-layer exiting"
+              onTransitionEnd={handleArtTransitionEnd}
+              aria-hidden="true"
+            />
+          )}
+          {/* Current layer fades in */}
+          {artLayers.current ? (
+            <img
+              key={artLayers.current}
+              src={artLayers.current}
               alt={track.album}
-              className={`album-art-image ${isPlaying ? 'playing' : ''}`}
+              className={`album-art-image art-layer ${isPlaying ? 'playing' : ''}`}
             />
           ) : (
             <div className="album-art-placeholder">PP</div>
@@ -269,17 +272,28 @@ function NowPlayingScreen({
           <span>{volume}%</span>
         </div>
 
-        <div className="volume-bar">
+        <div
+          className="volume-bar"
+          ref={volumeBarRef}
+          style={{ '--volume-val': `${volume}%` }}
+        >
           <input
             type="range"
             min="0"
             max="100"
             value={volume}
             onChange={(event) => onVolumeChange(Number(event.target.value))}
+            onInput={(event) => {
+              // Sync fill immediately on keyboard steps (before React re-render)
+              if (volumeBarRef.current) {
+                volumeBarRef.current.style.setProperty('--volume-val', `${event.target.value}%`)
+              }
+            }}
             className="volume-slider"
             aria-label="Volume"
+            step="5"
           />
-          <div className="volume-fill" style={{ width: `${volume}%` }}></div>
+          <div className="volume-fill" />
         </div>
       </div>
 

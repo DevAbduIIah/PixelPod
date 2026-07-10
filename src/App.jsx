@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import IPod from './components/IPod'
-import { useAuth as useSpotifyAuth } from './context/AuthContext'
-import { useSpotify } from './context/SpotifyContext'
-import { usePlayback } from './context/PlaybackContext'
-import useNavigation from './hooks/useNavigation'
-import useQueueManager from './hooks/useQueueManager'
-import { logger } from './utils/logger'
+import IPod from '@/components/IPod'
+import { useAuth as useSpotifyAuth } from '@/context/AuthContext'
+import { useSpotify } from '@/context/SpotifyContext'
+import { usePlayback } from '@/context/PlaybackContext'
+import useNavigation from '@/hooks/useNavigation'
+import useQueueManager from '@/hooks/useQueueManager'
+import { logger } from '@/utils/logger'
+import { APPEARANCE_STORAGE_KEY } from '@/constants/appearance'
 import './App.css'
 
-const APPEARANCE_STORAGE_KEY = 'pixelpod_appearance'
 
 function App() {
   const { isAuthenticated, isLoading: authLoading, login, logout, error: authError } = useSpotifyAuth()

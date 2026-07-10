@@ -102,10 +102,11 @@ export default function useNavigation({
 
   const navigateForward = useCallback((screen) => {
     setTransitionDirection('forward')
-    setMenuHistory((previousHistory) => [...previousHistory, currentScreen])
+    // Store current screen + selected position so back navigation can restore it
+    setMenuHistory((prev) => [...prev, { screen: currentScreen, index: selectedIndex }])
     setCurrentScreen(screen)
     setSelectedIndex(0)
-  }, [currentScreen])
+  }, [currentScreen, selectedIndex])
 
   const handleBack = useCallback(() => {
     if (currentScreen === 'search' && searchMode === 'results') {
@@ -120,10 +121,11 @@ export default function useNavigation({
 
     if (menuHistory.length > 0) {
       setTransitionDirection('back')
-      const previousScreen = menuHistory[menuHistory.length - 1]
+      const previous = menuHistory[menuHistory.length - 1]
       setMenuHistory(menuHistory.slice(0, -1))
-      setCurrentScreen(previousScreen)
-      setSelectedIndex(0)
+      // Support both old string entries and new {screen, index} entries
+      setCurrentScreen(typeof previous === 'string' ? previous : previous.screen)
+      setSelectedIndex(typeof previous === 'string' ? 0 : previous.index)
       setSearchMode('keyboard')
     }
   }, [menuHistory, currentScreen, searchMode, selectPlaylist])

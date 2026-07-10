@@ -5,8 +5,8 @@ import {
   fetchAllLikedSongs,
   searchSpotifyCatalog,
   fetchSpotifyUserProfile
-} from '../services/spotifyService'
-import { logger } from '../utils/logger'
+} from '@/services/spotifyService'
+import { logger } from '@/utils/logger'
 
 const SpotifyContext = createContext(null)
 

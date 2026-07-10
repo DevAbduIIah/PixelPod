@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 
-function getPointerAngle(target, event) {
+function getPointerAngle(target, clientX, clientY) {
   const rect = target.getBoundingClientRect()
   const centerX = rect.left + rect.width / 2
   const centerY = rect.top + rect.height / 2
-  return Math.atan2(event.clientY - centerY, event.clientX - centerX) * (180 / Math.PI)
+  return Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI)
 }
 
 export function useWheelInput({ onNext, onPrevious }) {
@@ -56,7 +56,7 @@ export function useWheelInput({ onNext, onPrevious }) {
     setIsDragging(true)
     setVelocity(0)
     rotationThresholdRef.current = 0
-    lastAngleRef.current = getPointerAngle(event.currentTarget, event)
+    lastAngleRef.current = getPointerAngle(event.currentTarget, event.clientX, event.clientY)
     lastTimeRef.current = Date.now()
 
     if (momentumRef.current) {
@@ -68,7 +68,7 @@ export function useWheelInput({ onNext, onPrevious }) {
   const handleMouseMove = (event) => {
     if (!isDragging) return
 
-    const angle = getPointerAngle(event.currentTarget, event)
+    const angle = getPointerAngle(event.currentTarget, event.clientX, event.clientY)
     const delta = angle - lastAngleRef.current
     const now = Date.now()
     const timeDelta = now - lastTimeRef.current
@@ -103,6 +103,61 @@ export function useWheelInput({ onNext, onPrevious }) {
     setIsDragging(false)
   }
 
+  // ── Touch handlers (mirrors mouse logic using first touch point) ──
+  const handleTouchStart = (event) => {
+    event.preventDefault() // prevent scroll hijack
+    const touch = event.touches[0]
+    setIsDragging(true)
+    setVelocity(0)
+    rotationThresholdRef.current = 0
+    lastAngleRef.current = getPointerAngle(event.currentTarget, touch.clientX, touch.clientY)
+    lastTimeRef.current = Date.now()
+
+    if (momentumRef.current) {
+      clearInterval(momentumRef.current)
+      momentumRef.current = null
+    }
+  }
+
+  const handleTouchMove = (event) => {
+    event.preventDefault()
+    if (!isDragging) return
+    const touch = event.touches[0]
+
+    const angle = getPointerAngle(event.currentTarget, touch.clientX, touch.clientY)
+    const delta = angle - lastAngleRef.current
+    const now = Date.now()
+    const timeDelta = now - lastTimeRef.current
+
+    let normalizedDelta = delta
+    if (delta > 180) normalizedDelta = delta - 360
+    if (delta < -180) normalizedDelta = delta + 360
+
+    if (timeDelta > 0) {
+      setVelocity(normalizedDelta / Math.max(timeDelta, 1))
+    }
+
+    const speed = Math.abs(normalizedDelta)
+    let threshold = 15
+    if (speed > 30) threshold = 10
+    else if (speed > 20) threshold = 12
+
+    if (Math.abs(normalizedDelta) > threshold) {
+      if (normalizedDelta > 0) {
+        onNext?.()
+      } else {
+        onPrevious?.()
+      }
+    }
+
+    lastAngleRef.current = angle
+    lastTimeRef.current = now
+  }
+
+  const handleTouchEnd = () => {
+    setIsDragging(false)
+  }
+
   return {
     isDragging,
     wheelHandlers: {
@@ -110,6 +165,11 @@ export function useWheelInput({ onNext, onPrevious }) {
       onMouseMove: handleMouseMove,
       onMouseUp: handleMouseUp,
       onMouseLeave: handleMouseUp
+    },
+    touchHandlers: {
+      onTouchStart: handleTouchStart,
+      onTouchMove: handleTouchMove,
+      onTouchEnd: handleTouchEnd
     }
   }
 }

@@ -1,35 +1,5 @@
+import { THEMES, SKINS } from '@/constants/appearance'
 import './SettingsScreen.css'
-
-const THEMES = [
-  {
-    id: 'classic',
-    label: 'Classic',
-    note: 'Monochrome display'
-  },
-  {
-    id: 'modern',
-    label: 'Modern',
-    note: 'Spotify-forward color'
-  }
-]
-
-const SKINS = [
-  {
-    id: 'silver',
-    label: 'Silver',
-    note: 'Polished aluminum'
-  },
-  {
-    id: 'graphite',
-    label: 'Graphite',
-    note: 'Dark anodized shell'
-  },
-  {
-    id: 'blue',
-    label: 'Blue',
-    note: 'Cool-toned edition'
-  }
-]
 
 function SettingsScreen({ userProfile, onLogout, theme, skin, onThemeChange, onSkinChange }) {
   const displayName = userProfile?.name || 'Spotify Listener'

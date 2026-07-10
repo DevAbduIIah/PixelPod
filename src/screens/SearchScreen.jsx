@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useDebounce } from '../hooks/useDebounce'
-import { logger } from '../utils/logger'
+import { useDebounce } from '@/hooks/useDebounce'
+import { logger } from '@/utils/logger'
+import { formatFollowers } from '@/utils/format'
+import { SEARCH_CATEGORIES, RECENT_SEARCHES_KEY, MAX_RECENT_SEARCHES } from '@/constants/search'
 import './SearchScreen.css'
 
-const CATEGORIES = ['Tracks', 'Albums', 'Artists']
-const RECENT_SEARCHES_KEY = 'pixelpod_recent_searches'
-const MAX_RECENT_SEARCHES = 5
+const CATEGORIES = SEARCH_CATEGORIES
 
 const getCategoryCount = (results, index) => {
   if (Array.isArray(results)) {
@@ -210,7 +210,7 @@ function SearchScreen({
               {activeCategory === 2 && (
                 <>
                   <div className="result-title">{item.name}</div>
-                  <div className="result-artist">{item.followers?.toLocaleString() || 0} followers</div>
+                  <div className="result-artist">{formatFollowers(item.followers)} followers</div>
                 </>
               )}
             </div>

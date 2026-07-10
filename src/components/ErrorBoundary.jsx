@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { logger } from '../utils/logger'
+import { logger } from '@/utils/logger'
 import './ErrorBoundary.css'
 
 class ErrorBoundary extends Component {

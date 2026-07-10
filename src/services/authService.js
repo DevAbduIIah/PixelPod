@@ -4,7 +4,7 @@ import {
   exchangeCodeForToken,
   clearTokens,
   initiateLogin
-} from '../utils/spotifyAuth'
+} from '@/utils/spotifyAuth'
 
 const SPOTIFY_PROFILE_ENDPOINT = 'https://api.spotify.com/v1/me'
 

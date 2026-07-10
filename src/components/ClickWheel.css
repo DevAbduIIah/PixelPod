@@ -19,6 +19,8 @@
   cursor: pointer;
   border: 3px solid var(--wheel-border);
   user-select: none;
+  touch-action: none;           /* prevent scroll hijack on mobile */
+  -webkit-touch-callout: none;  /* prevent iOS long-press menu */
   transition: transform 0.1s ease;
 }
 

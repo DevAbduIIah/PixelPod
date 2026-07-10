@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import Screen from './Screen'
 import ClickWheel from './ClickWheel'
-import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
-import { playClickSound, playSelectSound, playBackSound, initAudio } from '../utils/sounds'
+import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation'
+import { playClickSound, playSelectSound, playBackSound, initAudio } from '@/utils/sounds'
 import './IPod.css'
 
 function IPod({

@@ -232,3 +232,56 @@
     transform: translateY(0);
   }
 }
+
+/* ── Skeleton loading rows ───────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.skeleton-item {
+  cursor: default;
+  pointer-events: none;
+  min-height: 54px;
+  grid-template-columns: 6px minmax(0, 1fr);
+}
+
+.skeleton-marker {
+  width: 6px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+.skeleton-title,
+.skeleton-subtitle {
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    rgba(var(--accent-rgb), 0.08) 25%,
+    rgba(var(--accent-rgb), 0.18) 50%,
+    rgba(var(--accent-rgb), 0.08) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-title {
+  height: 11px;
+  width: 62%;
+}
+
+.skeleton-subtitle {
+  height: 9px;
+  width: 44%;
+  margin-top: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-title,
+  .skeleton-subtitle {
+    animation: none;
+    opacity: 0.5;
+  }
+}
